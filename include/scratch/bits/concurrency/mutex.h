@@ -26,14 +26,14 @@ public:
     }
 
     void lock() {
-        while (true) {
-            int x = UNLOCKED;
-            if (m_futex.compare_exchange_weak(x, LOCKED_WITHOUT_WAITERS)) {
-                // the uncontended case
-                break;
-            } else if (x == LOCKED_WITH_WAITERS) {
+        int x = UNLOCKED;
+        if (m_futex.compare_exchange_weak(x, LOCKED_WITHOUT_WAITERS)) {
+            // the uncontended case
+        } else {
+            if (x == LOCKED_WITH_WAITERS) {
                 futex_wait(&m_futex, LOCKED_WITH_WAITERS);
-            } else if (m_futex.compare_exchange_weak(x, LOCKED_WITH_WAITERS)) {
+            }
+            while (m_futex.exchange(LOCKED_WITH_WAITERS) != UNLOCKED) {
                 futex_wait(&m_futex, LOCKED_WITH_WAITERS);
             }
         }
