@@ -20,8 +20,9 @@ in practice there is never anybody "waiting" for it. We call such mutexes
 like to avoid the overhead of a system call when unlocking an uncontended mutex.
 
 Therefore, `scratch::mutex` stores a three-state "flag" indicating whether it's
-`UNLOCKED`, `LOCKED_WITHOUT_WAITERS` (that is, locked but currently uncontended),
-or `LOCKED_WITH_WAITERS`.
+`UNLOCKED`, `LOCKED_WITHOUT_WAITERS` (that is, locked but uncontended),
+or `LOCKED_WITH_WAITERS` (that is, locked but having been contended at some point
+since the last time it was in the `UNLOCKED` state).
 An uncontended mutex will only ever be in the first two of these states.
 
 A `scratch::mutex` stores *only* its three-state flag; it doesn't store any data
