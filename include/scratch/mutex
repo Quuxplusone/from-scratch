@@ -1,3 +1,5 @@
 #pragma once
 
+#include "bits/concurrency/lock-guard.h"
 #include "bits/concurrency/mutex.h"
+#include "bits/concurrency/tag-types.h"
