@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bits/type-traits/compiler-magic.h"
 #include "bits/type-traits/conditional.h"
 #include "bits/type-traits/enable-if.h"
 #include "bits/type-traits/integral-constant.h"
