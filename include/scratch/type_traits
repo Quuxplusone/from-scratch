@@ -6,4 +6,5 @@
 #include "bits/type-traits/enable-if.h"
 #include "bits/type-traits/integral-constant.h"
 #include "bits/type-traits/is-class.h"
+#include "bits/type-traits/is-foo.h"
 #include "bits/type-traits/remove-foo.h"
