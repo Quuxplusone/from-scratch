@@ -12,4 +12,5 @@
 #include "bits/type-traits/is-foo.h"
 #include "bits/type-traits/is-fooible.h"
 #include "bits/type-traits/is-function.h"
+#include "bits/type-traits/is-swappable.h"
 #include "bits/type-traits/remove-foo.h"
