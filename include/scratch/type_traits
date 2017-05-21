@@ -4,3 +4,4 @@
 #include "bits/type-traits/conditional.h"
 #include "bits/type-traits/enable-if.h"
 #include "bits/type-traits/integral-constant.h"
+#include "bits/type-traits/is-class.h"
