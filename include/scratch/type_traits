@@ -10,5 +10,6 @@
 #include "bits/type-traits/is-class.h"
 #include "bits/type-traits/is-convertible.h"
 #include "bits/type-traits/is-foo.h"
+#include "bits/type-traits/is-fooible.h"
 #include "bits/type-traits/is-function.h"
 #include "bits/type-traits/remove-foo.h"
