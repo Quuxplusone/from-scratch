@@ -2,4 +2,5 @@
 
 #include "bits/algorithm/advance.h"
 #include "bits/algorithm/iterator-tags.h"
+#include "bits/algorithm/reverse-iterator.h"
 #include "bits/traits-classes/iterator-traits.h"
