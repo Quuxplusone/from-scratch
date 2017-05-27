@@ -7,15 +7,32 @@
 #include <cstddef>
 #include <utility>
 
+namespace scratch::detail {
+
+template<class T, size_t N>
+struct array_storage {
+    using type = T[N];
+};
+
+template<class T>
+struct array_storage<T, 0> {
+    struct alignas(T) type {
+        constexpr T& operator[](size_t) { return *reinterpret_cast<T*>(this); }
+        constexpr const T& operator[](size_t) const { return *reinterpret_cast<const T*>(this); }
+    };
+};
+
+template<class T, size_t N>
+using array_storage_t = typename array_storage<T, N>::type;
+
+} // namespace scratch::detail
+
 namespace scratch {
 
 template<class T, size_t N>
 struct array {
-
-    static_assert(N >= 1, "N==0 is permitted by the Standard but not implemented correctly by any vendor");
-
     // This member must be public, so that is_aggregate_v<array<int, 2>>
-    T m_data[N];
+    detail::array_storage_t<T, N> m_data;
 
     using value_type = T;
     using size_type = size_t;
