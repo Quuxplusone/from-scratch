@@ -1,4 +1,5 @@
 #pragma once
 
+#include "bits/optional/in-place.h"
 #include "bits/utility/declval.h"
 #include "bits/utility/integer-sequence.h"
