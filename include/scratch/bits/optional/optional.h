@@ -4,6 +4,7 @@
 #include "scratch/bits/optional/enable-optional-smfs.h"
 #include "scratch/bits/optional/in-place.h"
 #include "scratch/bits/optional/nullopt.h"
+#include "scratch/bits/optional/optional-storage.h"
 #include "scratch/bits/type-traits/enable-if.h"
 #include "scratch/bits/type-traits/is-convertible.h"
 #include "scratch/bits/type-traits/is-foo.h"
@@ -11,55 +12,27 @@
 #include "scratch/bits/type-traits/is-swappable.h"
 
 #include <initializer_list>
-#include <new>
 #include <utility>
 
 namespace scratch {
 
 template<class T>
-class optional {
+class optional : private detail::optional_copyable<T> {
 
     static_assert(is_object_v<T>, "optional<T> works only with object types");
-
-    union {
-        char m_dummy;
-        T m_value;
-    };
-    bool m_has_value;
 
 public:
     using value_type = T;
 
-    constexpr optional() noexcept : m_has_value(false) {}
-    constexpr optional(nullopt_t) noexcept : m_has_value(false) {}
-
-    template<bool_if_t<is_copy_constructible_v<T>> = true>
-    optional(const optional& rhs)
-        noexcept(is_nothrow_copy_constructible_v<T>)
-    {
-        m_has_value = rhs.has_value();
-        if (m_has_value) {
-            ::new (&m_value) T(*rhs);
-        }
-    }
-
-    template<bool_if_t<is_move_constructible_v<T>> = true>
-    optional(optional&& rhs)
-        noexcept(is_nothrow_move_constructible_v<T>)
-    {
-        m_has_value = rhs.has_value();
-        if (m_has_value) {
-            ::new (&m_value) T(std::move(*rhs));
-        }
-    }
+    constexpr optional() noexcept = default;
+    constexpr optional(nullopt_t) noexcept {}
 
     template<class U, bool_if_t<is_constructible_v<T, const U&> && !is_convertible_v<const U&, T>> = true>
     explicit optional(const optional<U>& rhs)
         noexcept(is_nothrow_constructible_v<T, const U&>)
     {
-        m_has_value = rhs.has_value();
-        if (m_has_value) {
-            ::new (&m_value) T(*rhs);
+        if (rhs.has_value()) {
+            this->storage_emplace(*rhs);
         }
     }
 
@@ -67,9 +40,8 @@ public:
     optional(const optional<U>& rhs)
         noexcept(is_nothrow_constructible_v<T, const U&>)
     {
-        m_has_value = rhs.has_value();
-        if (m_has_value) {
-            ::new (&m_value) T(*rhs);
+        if (rhs.has_value()) {
+            this->storage_emplace(*rhs);
         }
     }
 
@@ -77,9 +49,8 @@ public:
     explicit optional(optional<U>&& rhs)
         noexcept(is_nothrow_constructible_v<T, U&&>)
     {
-        m_has_value = rhs.has_value();
-        if (m_has_value) {
-            ::new (&m_value) T(std::move(*rhs));
+        if (rhs.has_value()) {
+            this->storage_emplace(std::move(*rhs));
         }
     }
 
@@ -87,42 +58,37 @@ public:
     optional(optional<U>&& rhs)
         noexcept(is_nothrow_constructible_v<T, U&&>)
     {
-        m_has_value = rhs.has_value();
-        if (m_has_value) {
-            ::new (&m_value) T(std::move(*rhs));
+        if (rhs.has_value()) {
+            this->storage_emplace(std::move(*rhs));
         }
     }
 
     template<class U = T, bool_if_t<is_constructible_v<T, U&&> && !is_convertible_v<U&&, T>> = true>
-    explicit optional(U&& value)
-        noexcept(is_nothrow_constructible_v<T, U&&>)
+    constexpr explicit optional(U&& value)
+        noexcept(is_nothrow_constructible_v<T, U&&>) :
+        detail::optional_copyable<T>(in_place, std::forward<U>(value))
     {
-        m_has_value = true;
-        ::new (&m_value) T(std::forward<U>(value));
     }
 
     template<class U = T, bool_if_t<is_constructible_v<T, U&&> && is_convertible_v<U&&, T>> = true>
-    optional(U&& value)
-        noexcept(is_nothrow_constructible_v<T, U&&>)
+    constexpr optional(U&& value)
+        noexcept(is_nothrow_constructible_v<T, U&&>) :
+        detail::optional_copyable<T>(in_place, std::forward<U>(value))
     {
-        m_has_value = true;
-        ::new (&m_value) T(std::forward<U>(value));
     }
 
     template<class... Args, bool_if_t<is_constructible_v<T, Args&&...>> = true>
-    explicit optional(in_place_t, Args&&... args)
-        noexcept(is_nothrow_constructible_v<T, Args&&...>)
+    constexpr explicit optional(in_place_t, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, Args&&...>) :
+        detail::optional_copyable<T>(in_place, std::forward<Args>(args)...)
     {
-        m_has_value = true;
-        ::new (&m_value) T(std::forward<Args>(args)...);
     }
 
     template<class U, class... Args, bool_if_t<is_constructible_v<T, std::initializer_list<U>&, Args&&...>> = true>
-    explicit optional(in_place_t, std::initializer_list<U> il, Args&&... args)
-        noexcept(is_nothrow_constructible_v<T, std::initializer_list<U>&, Args&&...>)
+    constexpr explicit optional(in_place_t, std::initializer_list<U> il, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, std::initializer_list<U>&, Args&&...>) :
+        detail::optional_copyable<T>(in_place, il, std::forward<Args>(args)...)
     {
-        m_has_value = true;
-        ::new (&m_value) T(il, std::forward<Args>(args)...);
     }
 
     optional& operator=(nullopt_t) noexcept
@@ -137,10 +103,9 @@ public:
     {
         if (rhs.has_value()) {
             if (this->has_value()) {
-                m_value = *rhs;
+                this->storage_value() = *rhs;
             } else {
-                m_has_value = true;
-                ::new (&m_value) T(*rhs);
+                this->storage_emplace(*rhs);
             }
         } else {
             reset();
@@ -154,10 +119,9 @@ public:
     {
         if (rhs.has_value()) {
             if (this->has_value()) {
-                m_value = std::move(*rhs);
+                this->storage_value() = std::move(*rhs);
             } else {
-                m_has_value = true;
-                ::new (&m_value) T(std::move(*rhs));
+                this->storage_emplace(std::move(*rhs));
             }
         } else {
             reset();
@@ -171,27 +135,22 @@ public:
     {
 
         if (this->has_value()) {
-            m_value = std::forward<U>(rhs);
+            this->storage_value() = std::forward<U>(rhs);
         } else {
-            m_has_value = true;
-            ::new (&m_value) T(std::forward<U>(rhs));
+            this->storage_emplace(std::forward<U>(rhs));
         }
         return *this;
     }
 
-    ~optional() {
-        reset();
-    }
+    constexpr const T* operator->() const   { return &this->storage_value(); }
+    constexpr T* operator->()               { return &this->storage_value(); }
+    constexpr const T& operator*() const&   { return this->storage_value(); }
+    constexpr T& operator*() &              { return this->storage_value(); }
+    constexpr const T&& operator*() const&& { return std::move(this->storage_value()); }
+    constexpr T&& operator*() &&            { return std::move(this->storage_value()); }
 
-    constexpr const T* operator->() const   { return &m_value; }
-    constexpr T* operator->()               { return &m_value; }
-    constexpr const T& operator*() const&   { return m_value; }
-    constexpr T& operator*() &              { return m_value; }
-    constexpr const T&& operator*() const&& { return std::move(m_value); }
-    constexpr T&& operator*() &&            { return std::move(m_value); }
-
-    constexpr explicit operator bool() const noexcept { return has_value(); }
-    constexpr bool has_value() const noexcept { return m_has_value; }
+    constexpr explicit operator bool() const noexcept { return this->storage_has_value(); }
+    constexpr bool has_value() const noexcept         { return this->storage_has_value(); }
 
     constexpr T& value() &               { if (!has_value()) throw bad_optional_access(); return *(*this); }
     constexpr const T& value() const &   { if (!has_value()) throw bad_optional_access(); return *(*this); }
@@ -205,21 +164,17 @@ public:
         noexcept(is_nothrow_move_constructible_v<T> && is_nothrow_swappable_v<T>)
     {
         using std::swap;
-        if (has_value()) {
-            if (rhs.has_value()) {
+        if (this->storage_has_value()) {
+            if (rhs.storage_has_value()) {
                 swap(**this, *rhs);
             } else {
-                ::new (&rhs.m_value) T(std::move(m_value));
-                rhs.m_has_value = true;
-                m_value.~T();
-                m_has_value = false;
+                rhs.storage_emplace(std::move(this->storage_value()));
+                this->storage_reset();
             }
         } else {
-            if (rhs.has_value()) {
-                ::new (&m_value) T(std::move(rhs.m_value));
-                m_has_value = true;
-                rhs.m_value.~T();
-                rhs.m_has_value = false;
+            if (rhs.storage_has_value()) {
+                this->storage_emplace(std::move(rhs.storage_value()));
+                rhs.storage_reset();
             } else {
                 // do nothing
             }
@@ -227,9 +182,8 @@ public:
     }
 
     void reset() noexcept {
-        if (m_has_value) {
-            m_value.~T();
-            m_has_value = false;
+        if (this->storage_has_value()) {
+            this->storage_reset();
         }
     }
 
@@ -238,9 +192,8 @@ public:
         noexcept(is_nothrow_constructible_v<T, Args&&...>)
     {
         reset();
-        ::new (&m_value) T(std::forward<Args>(args)...);
-        m_has_value = true;
-        return m_value;
+        this->storage_emplace(std::forward<Args>(args)...);
+        return this->storage_value();
     }
 
     template<class U, class... Args, bool_if_t<is_constructible_v<T, std::initializer_list<U>&, Args&&...>> = true>
@@ -248,9 +201,8 @@ public:
         noexcept(is_nothrow_constructible_v<T, std::initializer_list<U>&, Args&&...>)
     {
         reset();
-        ::new (&m_value) T(il, std::forward<Args>(args)...);
-        m_has_value = true;
-        return m_value;
+        this->storage_emplace(il, std::forward<Args>(args)...);
+        return this->storage_value();
     }
 };
 
