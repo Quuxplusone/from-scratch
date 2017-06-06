@@ -16,10 +16,15 @@
 
 namespace scratch {
 
+template<class T> class optional;
+template<class T> struct tombstone_traits;
+
 template<class T>
 class optional : private detail::optional_copyable<T> {
 
     static_assert(is_object_v<T>, "optional<T> works only with object types");
+
+    template<class U> friend struct scratch::tombstone_traits;
 
 public:
     using value_type = T;

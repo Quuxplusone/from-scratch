@@ -1,9 +1,11 @@
 #pragma once
 
 #include "scratch/bits/optional/in-place.h"
+#include "scratch/bits/traits-classes/tombstone-traits.h"
 #include "scratch/bits/type-traits/enable-if.h"
 #include "scratch/bits/type-traits/is-fooible.h"
 
+#include <cstddef>
 #include <initializer_list>
 #include <new>
 #include <utility>
@@ -62,7 +64,7 @@ struct optional_storage {
 };
 
 template<class T>
-struct optional_storage<T, enable_if_t<is_trivially_destructible_v<T>>> {
+struct optional_storage<T, enable_if_t<is_trivially_destructible_v<T> && tombstone_traits<T>::spare_representations == 0>> {
     union {
         char m_dummy;
         T m_value;
@@ -105,6 +107,102 @@ struct optional_storage<T, enable_if_t<is_trivially_destructible_v<T>>> {
     void storage_emplace(std::initializer_list<U> il, Args&&... args) {
         ::new (&m_value) T(il, std::forward<Args>(args)...);
         m_has_value = true;
+    }
+};
+
+template<class T>
+struct optional_storage<T, enable_if_t<is_trivially_destructible_v<T> && tombstone_traits<T>::spare_representations >= 1>> {
+    union {
+        char m_dummy;
+        T m_value;
+    };
+
+    constexpr optional_storage() noexcept {
+        tombstone_traits<T>::set_spare_representation(&m_value, 0);
+    }
+
+    ~optional_storage() = default;
+
+    template<class... Args>
+    constexpr optional_storage(in_place_t, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, Args&&...>) :
+        m_value(std::forward<Args>(args)...) {}
+
+    template<class... Args, class U>
+    constexpr optional_storage(in_place_t, std::initializer_list<U> il, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, std::initializer_list<U>&, Args&&...>) :
+        m_value(il, std::forward<Args>(args)...) {}
+
+    constexpr bool storage_has_value() const noexcept {
+        return tombstone_traits<T>::index(&m_value) == size_t(-1);
+    }
+
+    constexpr T& storage_value() noexcept { return m_value; }
+    constexpr const T& storage_value() const noexcept { return m_value; }
+
+    void storage_reset() noexcept {
+        m_value.~T();
+        tombstone_traits<T>::set_spare_representation(&m_value, 0);
+    }
+
+    template<class... Args>
+    void storage_emplace(Args&&... args) {
+        ::new (&m_value) T(std::forward<Args>(args)...);
+    }
+
+    template<class U, class... Args>
+    void storage_emplace(std::initializer_list<U> il, Args&&... args) {
+        ::new (&m_value) T(il, std::forward<Args>(args)...);
+    }
+};
+
+template<class T>
+struct optional_storage<T, enable_if_t<!is_trivially_destructible_v<T> && tombstone_traits<T>::spare_representations >= 1>> {
+    union {
+        char m_dummy;
+        T m_value;
+    };
+
+    constexpr optional_storage() noexcept {
+        tombstone_traits<T>::set_spare_representation(&m_value, 0);
+    }
+
+    ~optional_storage() {
+        if (this->storage_has_value()) {
+            this->storage_reset();
+        }
+    }
+
+    template<class... Args>
+    constexpr optional_storage(in_place_t, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, Args&&...>) :
+        m_value(std::forward<Args>(args)...) {}
+
+    template<class... Args, class U>
+    constexpr optional_storage(in_place_t, std::initializer_list<U> il, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, std::initializer_list<U>&, Args&&...>) :
+        m_value(il, std::forward<Args>(args)...) {}
+
+    constexpr bool storage_has_value() const noexcept {
+        return tombstone_traits<T>::index(&m_value) == size_t(-1);
+    }
+
+    constexpr T& storage_value() noexcept { return m_value; }
+    constexpr const T& storage_value() const noexcept { return m_value; }
+
+    void storage_reset() noexcept {
+        m_value.~T();
+        tombstone_traits<T>::set_spare_representation(&m_value, 0);
+    }
+
+    template<class... Args>
+    void storage_emplace(Args&&... args) {
+        ::new (&m_value) T(std::forward<Args>(args)...);
+    }
+
+    template<class U, class... Args>
+    void storage_emplace(std::initializer_list<U> il, Args&&... args) {
+        ::new (&m_value) T(il, std::forward<Args>(args)...);
     }
 };
 
