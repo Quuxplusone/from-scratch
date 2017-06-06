@@ -3,4 +3,5 @@
 #include "bits/optional/in-place.h"
 #include "bits/optional/nullopt.h"
 #include "bits/optional/optional.h"
+#include "bits/optional/tombstone-traits.h"
 #include "bits/stdexcept/bad-optional-access.h"
