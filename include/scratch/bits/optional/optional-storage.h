@@ -1,16 +1,18 @@
 #pragma once
 
 #include "scratch/bits/optional/in-place.h"
+#include "scratch/bits/traits-classes/tombstone-traits.h"
 #include "scratch/bits/type-traits/enable-if.h"
 #include "scratch/bits/type-traits/is-fooible.h"
 
+#include <cstddef>
 #include <initializer_list>
 #include <new>
 #include <utility>
 
 namespace scratch::detail {
 
-template<class T>
+template<class T, class Enable = void>
 struct optional_storage {
     union {
         char m_dummy;
@@ -37,21 +39,65 @@ struct optional_storage {
     constexpr T& storage_value() noexcept { return m_value; }
     constexpr const T& storage_value() const noexcept { return m_value; }
 
-    void storage_reset() noexcept {
+    constexpr void storage_reset() noexcept {
         m_value.~T();
         m_has_value = false;
     }
 
     template<class... Args>
-    void storage_emplace(Args&&... args) {
+    constexpr void storage_emplace(Args&&... args) {
         ::new (&m_value) T(std::forward<Args>(args)...);
         m_has_value = true;
     }
 
     template<class U, class... Args>
-    void storage_emplace(std::initializer_list<U> il, Args&&... args) {
+    constexpr void storage_emplace(std::initializer_list<U> il, Args&&... args) {
         ::new (&m_value) T(il, std::forward<Args>(args)...);
         m_has_value = true;
+    }
+};
+
+template<class T>
+struct optional_storage<T, enable_if_t<tombstone_traits<T>::spare_representations >= 1>> {
+    union {
+        char m_dummy;
+        T m_value;
+    };
+
+    constexpr optional_storage() noexcept {
+        tombstone_traits<T>::set_spare_representation(&m_value, 0);
+    }
+
+    template<class... Args>
+    constexpr optional_storage(in_place_t, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, Args&&...>) :
+        m_value(std::forward<Args>(args)...) {}
+
+    template<class... Args, class U>
+    constexpr optional_storage(in_place_t, std::initializer_list<U> il, Args&&... args)
+        noexcept(is_nothrow_constructible_v<T, std::initializer_list<U>&, Args&&...>) :
+        m_value(il, std::forward<Args>(args)...) {}
+
+    constexpr bool storage_has_value() const noexcept {
+        return tombstone_traits<T>::index(&m_value) == size_t(-1);
+    }
+
+    constexpr T& storage_value() noexcept { return m_value; }
+    constexpr const T& storage_value() const noexcept { return m_value; }
+
+    constexpr void storage_reset() noexcept {
+        m_value.~T();
+        tombstone_traits<T>::set_spare_representation(&m_value, 0);
+    }
+
+    template<class... Args>
+    constexpr void storage_emplace(Args&&... args) {
+        ::new (&m_value) T(std::forward<Args>(args)...);
+    }
+
+    template<class U, class... Args>
+    constexpr void storage_emplace(std::initializer_list<U> il, Args&&... args) {
+        ::new (&m_value) T(il, std::forward<Args>(args)...);
     }
 };
 
