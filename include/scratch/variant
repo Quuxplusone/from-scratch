@@ -1,1 +1,7 @@
 #pragma once
+
+#include "bits/stdexcept/bad-variant-access.h"
+#include "bits/variant/free-functions.h"
+#include "bits/variant/variant.h"
+#include "bits/variant/variant-size.h"
+#include "bits/variant/visit.h"
