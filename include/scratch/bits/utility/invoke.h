@@ -8,14 +8,19 @@
 #include "scratch/bits/type-traits/is-function.h"
 #include "scratch/bits/type-traits/priority-tag.h"
 #include "scratch/bits/utility/declval.h"
+#include "scratch/bits/utility/is-reference-wrapper.h"
 
 #include <utility>
 
 // If "f" is a pointer to member function of some class B:
 // - If std::is_base_of_v<B, std::decay_t<O>>, then INVOKE(f, o, args...) is equivalent to (o.*f)(args...)
+// - Otherwise, if std::decay_t<O> is a specialization of std::reference_wrapper,
+//   then INVOKE(f, o, args...) is equivalent to (o.get().*f)(args...)
 // - Otherwise, INVOKE(f, o, args...) is equivalent to ((*o).*f)(args...)
 // Otherwise, if "f" is a pointer to data member of class B:
 // - If std::is_base_of_v<B, std::decay_t<O>>, then INVOKE(f, o) is equivalent to (o.*f)
+// - Otherwise, if std::decay_t<O> is a specialization of std::reference_wrapper,
+//   then INVOKE(f, o) is equivalent to (o.get().*f)
 // - Otherwise, INVOKE(f, o) is equivalent to ((*o).*f)
 // Otherwise, if "f" is any other type, then INVOKE(f, args...) is equivalent to f(args...)
 
@@ -29,6 +34,16 @@ constexpr auto invoke_pm_impl(false_type, priority_tag<2>, M B::*f, O&& o)
         decltype( (std::forward<O>(o).*f) )>
 {
     return (std::forward<O>(o).*f);
+}
+
+// This is the "F is a member object pointer, O is reference_wrapper" case.
+template<class B, class M, class O>
+constexpr auto invoke_pm_impl(false_type, priority_tag<1>, M B::*f, O&& o)
+    noexcept(noexcept( (std::forward<O>(o).get().*f) ))
+    -> enable_if_t<is_reference_wrapper_v<decay_t<O>>,
+        decltype( (std::forward<O>(o).get().*f) )>
+{
+    return (std::forward<O>(o).get().*f);
 }
 
 // This is the "F is a member object pointer, O is (smart) pointer" case.
@@ -48,6 +63,16 @@ constexpr auto invoke_pm_impl(true_type, priority_tag<2>, M B::*f, O&& o, Args&&
         decltype( (std::forward<O>(o).*f)(std::forward<Args>(args)...) )>
 {
     return (std::forward<O>(o).*f)(std::forward<Args>(args)...);
+}
+
+// This is the "F is a member function pointer, O is reference_wrapper" case.
+template<class B, class M, class O, class... Args>
+constexpr auto invoke_pm_impl(true_type, priority_tag<1>, M B::*f, O&& o, Args&&... args)
+    noexcept(noexcept( (std::forward<O>(o).get().*f)(std::forward<Args>(args)...) ))
+    -> enable_if_t<is_reference_wrapper_v<decay_t<O>>,
+        decltype( (std::forward<O>(o).get().*f)(std::forward<Args>(args)...) )>
+{
+    return (std::forward<O>(o).get().*f)(std::forward<Args>(args)...);
 }
 
 // This is the "F is a member function pointer, O is (smart) pointer" case.
