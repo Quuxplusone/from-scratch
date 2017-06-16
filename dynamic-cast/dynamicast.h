@@ -8,12 +8,16 @@ struct MyTypeInfo {
     void *(*maybeFromHasAPublicChildOfTypeTo_)(char *p, int offset, const std::type_info& from, const std::type_info& to);
     bool (*isPublicBaseOfYourself)(int offset, const std::type_info& from);
     bool (*clangBugProhibitsConversion)(int from_offset, const std::type_info& from, int to_offset, const std::type_info& to);
+    void *(*clangBugConvertToAmbiguousBase_)(char *p, const std::type_info& to);
 
     void *convertToBase(void *p, const std::type_info& to) const {
         return convertToBase_(reinterpret_cast<char*>(p), to);
     }
     void *maybeFromHasAPublicChildOfTypeTo(void *p, int offset, const std::type_info& from, const std::type_info& to) const {
         return maybeFromHasAPublicChildOfTypeTo_(reinterpret_cast<char*>(p), offset, from, to);
+    }
+    void *clangBugConvertToAmbiguousBase(void *p, const std::type_info& to) const {
+        return clangBugConvertToAmbiguousBase_(reinterpret_cast<char*>(p), to);
     }
 };
 
@@ -87,7 +91,14 @@ PTo dynamicast(From *p) {
             if (!ti.isPublicBaseOfYourself(offset, typeid(From))) {
                 return nullptr;
             }
-            return reinterpret_cast<To *>(ti.convertToBase(mdo, typeid(To)));
+            void *answer = ti.convertToBase(mdo, typeid(To));
+#ifdef _LIBCPP_VERSION
+            // Clang bug 33439
+            if (answer == nullptr) {
+                answer = ti.clangBugConvertToAmbiguousBase(mdo, typeid(To));
+            }
+#endif
+            return reinterpret_cast<To *>(answer);
         }
     }
 }
@@ -177,7 +188,14 @@ To *dynamicast_impl(From *p, priority_tag<4>) {
     if (!ti.isPublicBaseOfYourself(offset, typeid(From))) {
         return nullptr;
     }
-    return reinterpret_cast<To *>(ti.convertToBase(mdo, typeid(To)));
+    void *answer = ti.convertToBase(mdo, typeid(To));
+#ifdef _LIBCPP_VERSION
+    // Clang bug 33439
+    if (answer == nullptr) {
+        answer = ti.clangBugConvertToAmbiguousBase(mdo, typeid(To));
+    }
+#endif
+    return reinterpret_cast<To *>(answer);
 }
 
 template<class PTo, class From>

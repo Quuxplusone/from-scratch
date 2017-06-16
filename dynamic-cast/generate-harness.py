@@ -56,6 +56,16 @@ class Subobject(object):
                     return True
         return False
 
+    def get_first_subobject_of_type(self, base):
+        # Clang bug 33439
+        if self.base == base:
+            return self
+        for dso in self.direct_superobject_of:
+            result = dso.get_first_subobject_of_type(base)
+            if result is not None:
+                return result
+        return None
+
 
 class LayoutState(object):
     def __init__(self, root):
@@ -183,6 +193,16 @@ class Node(object):
         for so in self.get_public_bases():
             if not self.is_ambiguous_base(so.base):
                 yield so
+
+    def get_ambiguous_nonleaf_bases(self):
+        # Clang bug 33439
+        layout = self.get_class_layout()
+        for so in self.get_public_bases():
+            if self.is_ambiguous_base(so.base):
+                if so.base.direct_bases:
+                    # Notice that this ignores accessibility; we might pick a non-public base object.
+                    # We just take the first one in inheritance order.
+                    yield layout[0].get_first_subobject_of_type(so.base)
 
     def get_populated_layout_state(self):
         global DEBUG
@@ -337,13 +357,27 @@ bool %s_clangBugProhibitsConversion(int from_offset, const std::type_info& from,
         )
     ) + '\n'
     result += '''
+void *%s_clangBugConvertToAmbiguousBase(char *p, const std::type_info& to) {%s
+    return nullptr;
+}
+    '''.strip() % (
+        node.name,
+        # Clang bug 33439
+        ''.join(
+            '\n    if (to == typeid(%s)) return p + %d;' % (so.base.name, so.offset)
+            for so in node.get_ambiguous_nonleaf_bases()
+        ),
+    ) + '\n'
+    result += '''
 MyTypeInfo %s_typeinfo {
     %s_convertToBase,
     %s_maybeFromHasAPublicChildOfTypeTo,
     %s_isPublicBaseOfYourself,
     %s_clangBugProhibitsConversion,
+    %s_clangBugConvertToAmbiguousBase,
 };
     '''.strip() % (
+        node.name,
         node.name,
         node.name,
         node.name,
