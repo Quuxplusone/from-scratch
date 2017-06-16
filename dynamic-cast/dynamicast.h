@@ -7,6 +7,7 @@ struct MyTypeInfo {
     void *(*convertToBase_)(char *p, const std::type_info& to);
     void *(*maybeFromHasAPublicChildOfTypeTo_)(char *p, int offset, const std::type_info& from, const std::type_info& to);
     bool (*isPublicBaseOfYourself)(int offset, const std::type_info& from);
+    bool (*clangBugProhibitsConversion)(int from_offset, const std::type_info& from, int to_offset, const std::type_info& to);
 
     void *convertToBase(void *p, const std::type_info& to) const {
         return convertToBase_(reinterpret_cast<char*>(p), to);
@@ -55,7 +56,17 @@ PTo dynamicast(From *p) {
         if (subobj != nullptr) {
             return reinterpret_cast<To *>(subobj);
         } else if (ti.isPublicBaseOfYourself(offset, typeid(From))) {
-            return reinterpret_cast<To *>(ti.convertToBase(mdo, typeid(To)));
+            void *answer = ti.convertToBase(mdo, typeid(To));
+#ifdef _LIBCPP_VERSION
+            // Clang bug 33425
+            if (answer != nullptr) {
+                int to_offset = reinterpret_cast<char *>(answer) - reinterpret_cast<char *>(mdo);
+                if (ti.clangBugProhibitsConversion(offset, typeid(From), to_offset, typeid(To))) {
+                    return nullptr;
+                }
+            }
+#endif
+            return reinterpret_cast<To *>(answer);
         } else {
             return nullptr;
         }
@@ -130,7 +141,16 @@ To *dynamicast_impl(From *p, priority_tag<6>) {
     if (subobj != nullptr) {
         return reinterpret_cast<To *>(subobj);
     } else if (ti.isPublicBaseOfYourself(offset, typeid(From))) {
-        return reinterpret_cast<To *>(ti.convertToBase(mdo, typeid(To)));
+        void *answer = ti.convertToBase(mdo, typeid(To));
+#ifdef _LIBCPP_VERSION
+        if (answer != nullptr) {
+            int to_offset = reinterpret_cast<char *>(answer) - reinterpret_cast<char *>(mdo);
+            if (ti.clangBugProhibitsConversion(offset, typeid(From), to_offset, typeid(To))) {
+                return nullptr;
+            }
+        }
+#endif
+        return reinterpret_cast<To *>(answer);
     } else {
         return nullptr;
     }

@@ -43,6 +43,19 @@ class Subobject(object):
                     return True
         return False
 
+    def has_indirect_nonpublic_path_down_to(self, root):
+        # Clang bug 33425
+        if self == root:
+            return False
+        for dso in self.direct_subobject_of:
+            if dso.base.has_direct_nonpublic_base(self.base):
+                if dso != root and dso.has_path_down_to(root):
+                    return True
+            elif dso.base.has_direct_public_base(self.base):
+                if dso != root and dso.has_nonpublic_path_down_to(root):
+                    return True
+        return False
+
 
 class LayoutState(object):
     def __init__(self, root):
@@ -309,12 +322,29 @@ bool %s_isPublicBaseOfYourself(int offset, const std::type_info& from) {%s%s
         ),
     ) + '\n'
     result += '''
+bool %s_clangBugProhibitsConversion(int from_offset, const std::type_info& from, int to_offset, const std::type_info& to) {%s
+    return false;
+}
+    '''.strip() % (
+        node.name,
+        # Clang bug 33425
+        ''.join(
+            '\n    if (from == typeid(%s) && from_offset == %d && to == typeid(%s) && to_offset == %d) return true;' % (
+                pso.base.name, pso.offset, cso.base.name, cso.offset)
+            for pso in node.get_public_bases()
+            for cso in node.get_public_bases()
+            if (pso.has_indirect_nonpublic_path_down_to(cso))
+        )
+    ) + '\n'
+    result += '''
 MyTypeInfo %s_typeinfo {
     %s_convertToBase,
     %s_maybeFromHasAPublicChildOfTypeTo,
     %s_isPublicBaseOfYourself,
+    %s_clangBugProhibitsConversion,
 };
     '''.strip() % (
+        node.name,
         node.name,
         node.name,
         node.name,
