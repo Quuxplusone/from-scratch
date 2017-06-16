@@ -219,13 +219,11 @@ class Node(object):
         # Clang bug 33487
         state = self.get_populated_layout_state()
         for (parent, child) in state.ambiguous_public_child_pairs:
-            if parent.offset > child.offset:
-                layout_sensitive_descendants_of_child_type = [
-                    1 for p, c in state.ambiguous_public_child_pairs
-                    if p == parent and c.base == child.base and p.has_at_least_n_virtuals_on_the_path_down_to(c, 2)
-                ]
-                if len(layout_sensitive_descendants_of_child_type) == 1:
+            if not any(c.base == child.base for c in parent.direct_subobject_of):
+                pick = next(c for p, c in state.ambiguous_public_child_pairs if p == parent and c.base == child.base)
+                if child == pick:
                     yield parent, child
+
 
     def get_populated_layout_state(self):
         global DEBUG
