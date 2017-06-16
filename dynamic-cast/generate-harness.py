@@ -56,6 +56,17 @@ class Subobject(object):
                     return True
         return False
 
+    def has_at_least_n_virtuals_on_the_path_down_to(self, root, n):
+        # Clang bug 33487
+        if self == root:
+            return (n == 0)
+        for dso in self.direct_subobject_of:
+            if dso.base.has_direct_virtual_base(self.base):
+                return dso.has_at_least_n_virtuals_on_the_path_down_to(root, n - 1)
+            else:
+                return dso.has_at_least_n_virtuals_on_the_path_down_to(root, n)
+        return False
+
     def get_first_subobject_of_type(self, base):
         # Clang bug 33439
         if self.base == base:
@@ -204,6 +215,18 @@ class Node(object):
                     # We just take the first one in inheritance order.
                     yield layout[0].get_first_subobject_of_type(so.base)
 
+    def get_layout_sensitive_ambiguous_child_pairs(self):
+        # Clang bug 33487
+        state = self.get_populated_layout_state()
+        for (parent, child) in state.ambiguous_public_child_pairs:
+            if parent.offset > child.offset:
+                layout_sensitive_descendants_of_child_type = [
+                    1 for p, c in state.ambiguous_public_child_pairs
+                    if p == parent and c.base == child.base and p.has_at_least_n_virtuals_on_the_path_down_to(c, 2)
+                ]
+                if len(layout_sensitive_descendants_of_child_type) == 1:
+                    yield parent, child
+
     def get_populated_layout_state(self):
         global DEBUG
         if self.state is None:
@@ -315,6 +338,8 @@ void *%s_convertToBase(char *p, const std::type_info& to) {%s
     ) + '\n'
     result += '''
 void *%s_maybeFromHasAPublicChildOfTypeTo(char *p, int offset, const std::type_info& from, const std::type_info& to) {%s
+#ifdef _LIBCPP_VERSION%s
+#endif
     return nullptr;
 }
     '''.strip() % (
@@ -322,6 +347,11 @@ void *%s_maybeFromHasAPublicChildOfTypeTo(char *p, int offset, const std::type_i
         ''.join(
             '\n    if (from == typeid(%s) && to == typeid(%s) && offset == %d) return p + %d;' % (f.base.name, t.base.name, f.offset, t.offset)
             for f, t in node.get_public_child_pairs()
+        ),
+        # Clang bug 33487
+        ''.join(
+            '\n    if (from == typeid(%s) && to == typeid(%s) && offset == %d) return p + %d;' % (f.base.name, t.base.name, f.offset, t.offset)
+            for f, t in node.get_layout_sensitive_ambiguous_child_pairs()
         ),
     ) + '\n'
     result += '''
