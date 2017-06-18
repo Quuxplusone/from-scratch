@@ -17,6 +17,11 @@ clang:
 	CXXFLAGS=-DFREE_USE_OF_CXX17 ../dependency-graph/unity-dump.py things.gen.cc dynamicast.cc harness.gen.cc --clang
 	echo 'Success!'
 
+msvc:
+	./generate-harness.py --seed=$(SEED) --msvc
+	../dependency-graph/unity-dump.py things.gen.cc dynamicast.cc harness.gen.cc --msvc
+	echo 'Success!'
+
 benchmark:
 	./generate-harness.py --seed=$(SEED) --benchmark
 	$(CXX) $(CXXFLAGS) $(BENCHMARK_FLAGS) harness.gen.cc dynamicast.cc things.gen.cc -o bench

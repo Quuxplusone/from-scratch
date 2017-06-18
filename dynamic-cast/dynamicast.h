@@ -78,6 +78,8 @@ PTo dynamicast(From *p) {
     }
 }
 
+#elif defined(_MSC_VER)
+#include "dynamicast-msvc.h"
 #else
 #include "dynamicast-cxx14.h"
 #endif
