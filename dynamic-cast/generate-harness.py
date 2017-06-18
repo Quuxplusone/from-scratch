@@ -4,7 +4,7 @@ import argparse
 import random
 
 DEBUG = False
-
+MSVC = False
 
 class Subobject(object):
     def __init__(self, base, is_virtual, offset, direct_subobject_of):
@@ -71,10 +71,12 @@ class Node(object):
 
     def get_all_virtual_bases(self, acc):
         for b in self.direct_bases:
-            if b.is_virtual:
-                if b.base not in acc:
-                    acc += [b.base]
-            acc = b.base.get_all_virtual_bases(acc)
+            if MSVC:
+                acc = b.base.get_all_virtual_bases(acc)
+            if b.is_virtual and b.base not in acc:
+                acc += [b.base]
+            if not MSVC:
+                acc = b.base.get_all_virtual_bases(acc)
         return acc
 
     def has_direct_public_base(self, base):
@@ -86,6 +88,9 @@ class Node(object):
     def is_ambiguous_base(self, base):
         return len([so for so in self.get_class_layout() if so.base == base]) >= 2
 
+    def has_any_virtual_bases(self):
+        return bool(self.get_all_virtual_bases([]))
+
     def layout_(self, state, from_subobject, include_virtual_bases):
         for b in self.direct_bases:
             if not b.is_virtual:
@@ -93,9 +98,17 @@ class Node(object):
                 state.layout += [so]
                 so.base.layout_(state, from_subobject=so, include_virtual_bases=False)
 
-        if all(b.is_virtual for b in self.direct_bases):
-            state.offset += 8  # for my vptr, since I have no non-virtual direct bases
-        state.offset += 8  # for my data
+        if not MSVC:
+            if all(b.is_virtual for b in self.direct_bases):
+                state.offset += 8  # for my vptr, since I have no non-virtual direct bases
+            state.offset += 8  # for my data
+        else:
+            if not self.direct_bases:
+                state.offset += 8  # for my vfptr
+            if any(b.is_virtual for b in self.direct_bases):
+                if not any(b.base.has_any_virtual_bases() for b in self.direct_bases if not b.is_virtual):
+                    state.offset += 8  # for my vbptr
+            state.offset += 8  # for my data
 
         if include_virtual_bases:
             for base in self.get_all_virtual_bases([]):
@@ -227,10 +240,11 @@ struct %s %s %s {
         node.name,
     ) + '\n'
     result += '''
-static_assert(sizeof (%s) == %d);
+static_assert(sizeof (%s) == %d%s);
     '''.strip() % (
         node.name,
         node.get_full_object_size(),
+        ', "unexpected sizeof"' if MSVC else '',
     ) + '\n'
     return result
 
@@ -303,14 +317,37 @@ const MyTypeInfo& awkward_typeinfo_conversion(const std::type_info& ti) {%s
     )
 
 
+def help_msvc_with_sfinae(nodes):
+    result = ''
+    for f in nodes:
+        result += 'template<> struct can_dynamic_cast<%s*, void*> : std::true_type {};\n' % f.name
+        for t in nodes:
+            if f == t:
+                can_dynamic_cast = True
+            elif f.is_ambiguous_base(t):
+                can_dynamic_cast = False
+            elif any(so.base == t for so in f.get_public_bases()):
+                can_dynamic_cast = True
+            elif any(so.base == t for so in f.get_nonpublic_bases()):
+                can_dynamic_cast = False
+            else:
+                can_dynamic_cast = True
+            result += 'template<> struct can_dynamic_cast<%s*, %s*> : std::%s {};\n' % (
+                f.name,
+                t.name,
+                'true_type' if can_dynamic_cast else 'false_type',
+            )
+    return result
+
+
 def test_to_function_definition(nodes):
     result = '''
 template<class To>
 void test_to() {
     '''.strip() + '\n'
     for n in nodes:
-        for path in n.generate_base_paths('instance<%s>' % n.name, lambda b: '->as_%s()' % b.base.name):
-            result += '    test<To>(%s, instance<%s>->as_charptr(), "%s");\n' % (path, n.name, path)
+        for path in n.generate_base_paths('instance<%s>()' % n.name, lambda b: '->as_%s()' % b.base.name):
+            result += '    test<To>(can_dynamic_cast<decltype(%s),To*>{}, %s, instance<%s>()->as_charptr(), "%s");\n' % (path, path, n.name, path)
 
     result += '}\n'
     return result
@@ -335,7 +372,7 @@ template<class To, class Native>
 void benchmark_to(Native n) {
     '''.strip() + '\n'
     for n in nodes:
-        for path in n.generate_base_paths('instance<%s>' % n.name, lambda b: '->as_%s()' % b.base.name):
+        for path in n.generate_base_paths('instance<%s>()' % n.name, lambda b: '->as_%s()' % b.base.name):
             result += '    run_benchmark<To>(n, %s);\n' % (path)
 
     result += '}\n'
@@ -356,7 +393,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=None, help='Seed for the random number generator')
     parser.add_argument('--benchmark', action='store_true', help='Generate a benchmark harness instead of a testing harness')
+    parser.add_argument('--msvc', action='store_true', help='Use MSVC ABI instead of Itanium ABI')
     options = parser.parse_args()
+    MSVC = options.msvc
 
     random.seed(options.seed)
 
@@ -378,9 +417,13 @@ if __name__ == '__main__':
         print >>harness_cc, '#include "dynamicast.h"'
         if options.benchmark:
             print >>harness_cc, '#include "benchmark-harness.h"\n'
+            if MSVC:
+                print >>harness_cc, help_msvc_with_sfinae(nodes)
             print >>harness_cc, benchmark_to_function_definition(nodes)
             print >>harness_cc, benchmark_main_function_definition(nodes)
         else:
             print >>harness_cc, '#include "test-harness.h"\n'
+            if MSVC:
+                print >>harness_cc, help_msvc_with_sfinae(nodes)
             print >>harness_cc, test_to_function_definition(nodes)
             print >>harness_cc, test_main_function_definition(nodes)
