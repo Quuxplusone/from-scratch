@@ -14,3 +14,4 @@
 #include "bits/type-traits/is-function.h"
 #include "bits/type-traits/is-swappable.h"
 #include "bits/type-traits/remove-foo.h"
+#include "bits/type-traits/void-t.h"
