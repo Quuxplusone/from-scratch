@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scratch/bits/smart-ptrs/default-delete.h"
+#include "scratch/bits/smart-ptrs/forward-declarations.h"
 #include "scratch/bits/smart-ptrs/smart-ptr-base.h"
 #include "scratch/bits/type-traits/enable-if.h"
 #include "scratch/bits/type-traits/is-foo.h"
@@ -11,7 +12,7 @@
 
 namespace scratch {
 
-template<typename T, typename Deleter = default_delete<T>>
+template<typename T, typename Deleter /* = default_delete<T> */ >
 class unique_ptr : private compressed_element<Deleter, 0>, public detail::smart_ptr_base<T>
 {
     using detail::smart_ptr_base<T>::m_ptr;
