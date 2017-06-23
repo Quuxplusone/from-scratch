@@ -10,6 +10,7 @@ struct shared_ptr_control_block {
     virtual ~shared_ptr_control_block() = default;
 
     std::atomic<int> m_use_count {1};
+    std::atomic<int> m_weak_count {1};
 };
 
 template<class DeletionLambda>
