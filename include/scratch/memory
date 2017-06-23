@@ -7,5 +7,7 @@
 #include "bits/smart-ptrs/observer-ptr.h"
 #include "bits/smart-ptrs/shared-ptr.h"
 #include "bits/smart-ptrs/unique-ptr.h"
+#include "bits/smart-ptrs/weak-ptr.h"
+#include "bits/stdexcept/bad-weak-ptr.h"
 #include "bits/traits-classes/allocator-traits.h"
 #include "bits/traits-classes/pointer-traits.h"

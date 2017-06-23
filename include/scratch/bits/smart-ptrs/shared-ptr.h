@@ -4,6 +4,7 @@
 #include "scratch/bits/smart-ptrs/forward-declarations.h"
 #include "scratch/bits/smart-ptrs/shared-ptr-control-block.h"
 #include "scratch/bits/smart-ptrs/smart-ptr-base.h"
+#include "scratch/bits/stdexcept/bad-weak-ptr.h"
 #include "scratch/bits/type-traits/enable-if.h"
 #include "scratch/bits/type-traits/is-foo.h"
 #include "scratch/bits/type-traits/is-fooible.h"
@@ -15,6 +16,8 @@ namespace scratch {
 template<typename T>
 class shared_ptr : public detail::smart_ptr_base<T>
 {
+    friend class weak_ptr<T>;
+
     using detail::smart_ptr_base<T>::m_ptr;
 public:
     using element_type = typename detail::smart_ptr_base<T>::element_type;
@@ -66,6 +69,16 @@ public:
         return *this;
     }
 
+    template<class Y, class = enable_if_t<is_convertible_v<Y*, T*>>>
+    shared_ptr(const weak_ptr<Y>& rhs) {
+        shared_ptr<Y> locked = rhs.lock();
+        if (locked) {
+            *this = std::move(locked);
+        } else {
+            throw bad_weak_ptr();
+        }
+    }
+
     void swap(shared_ptr& rhs) noexcept {
         std::swap(m_ptr, rhs.m_ptr);
         std::swap(m_ctrl, rhs.m_ctrl);
@@ -106,6 +119,10 @@ public:
         }
     }
 
+    weak_ptr<T> unlock() const noexcept {
+        return weak_ptr<T>(*this);
+    }
+
 private:
     void increment_use_count() noexcept {
         if (m_ctrl != nullptr) {
@@ -117,13 +134,18 @@ private:
             int new_use_count = --m_ctrl->m_use_count;
             if (new_use_count == 0) {
                 m_ctrl->delete_controlled_object();
-                delete m_ctrl;
+                int new_weak_count = --m_ctrl->m_weak_count;
+                if (new_weak_count == 0) {
+                    delete m_ctrl;
+                }
             }
         }
     }
 
     detail::shared_ptr_control_block *m_ctrl = nullptr;
 };
+
+template <class T> shared_ptr(weak_ptr<T>) -> shared_ptr<T>;  // deduction guide
 
 template<class T> bool operator==(const shared_ptr<T>& a, decltype(nullptr)) noexcept { return a.get() == nullptr; }
 template<class T> bool operator!=(const shared_ptr<T>& a, decltype(nullptr)) noexcept { return a.get() != nullptr; }
