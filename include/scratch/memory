@@ -3,6 +3,7 @@
 #include "bits/algorithm/uninitialized.h"
 #include "bits/containers/allocator.h"
 #include "bits/smart-ptrs/default-delete.h"
+#include "bits/smart-ptrs/enable-shared-from-this.h"
 #include "bits/smart-ptrs/make-shared.h"
 #include "bits/smart-ptrs/observer-ptr.h"
 #include "bits/smart-ptrs/shared-ptr.h"
