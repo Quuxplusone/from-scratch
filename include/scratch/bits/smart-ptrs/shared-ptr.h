@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scratch/bits/smart-ptrs/default-delete.h"
+#include "scratch/bits/smart-ptrs/enable-shared-from-this.h"
 #include "scratch/bits/smart-ptrs/forward-declarations.h"
 #include "scratch/bits/smart-ptrs/shared-ptr-control-block.h"
 #include "scratch/bits/smart-ptrs/smart-ptr-base.h"
@@ -17,6 +18,7 @@ template<typename T>
 class shared_ptr : public detail::smart_ptr_base<T>
 {
     friend class weak_ptr<T>;
+    template<class Y> friend class shared_ptr;
 
     using detail::smart_ptr_base<T>::m_ptr;
 public:
@@ -26,8 +28,12 @@ public:
     constexpr shared_ptr(decltype(nullptr)) noexcept {}
 
     explicit shared_ptr(element_type *ptr) : shared_ptr(ptr, default_delete<T>{}) {}
-    template<class Y, class Deleter> explicit shared_ptr(Y *ptr,            Deleter d) { reset(ptr, std::move(d)); }
-    template<class Deleter>          explicit shared_ptr(decltype(nullptr), Deleter d) { reset(nullptr, std::move(d)); }
+    template<class Y, class Deleter> explicit shared_ptr(Y *ptr, Deleter d) {
+        reset(ptr, std::move(d));
+    }
+    template<class Deleter> explicit shared_ptr(decltype(nullptr), Deleter d) {
+        reset(nullptr, std::move(d));
+    }
 
     template<class Y, bool_if_t<!is_array_v<T>> = true>
     explicit shared_ptr(Y *ptr) : shared_ptr(ptr, default_delete<Y>{}) {}
@@ -37,6 +43,7 @@ public:
     shared_ptr(const shared_ptr<Y>& rhs, T* ptr) noexcept : m_ctrl(rhs.m_ctrl) {
         m_ptr = ptr;
         increment_use_count();
+        // The aliasing constructor does NOT call maybe_enable_sharing_from_this!
     }
 
     shared_ptr(const shared_ptr& rhs) noexcept : shared_ptr(rhs, rhs.get()) {}
@@ -109,6 +116,7 @@ public:
         this->reset();
         m_ctrl = new_ctrl;
         m_ptr = ptr;
+        maybe_enable_sharing_from_this(ptr);
     }
 
     long use_count() const noexcept {
@@ -139,6 +147,19 @@ private:
                     delete m_ctrl;
                 }
             }
+        }
+    }
+
+    template<class Y>
+    void maybe_enable_sharing_from_this(Y *p) {
+        maybe_enable_sharing_from_this_impl(p, p);
+    }
+    void maybe_enable_sharing_from_this_impl(...) { }
+    template<class Y, class Z, class = enable_if_t<is_convertible_v<Y *, const enable_shared_from_this<Z> *>>>
+    void maybe_enable_sharing_from_this_impl(Y *, const enable_shared_from_this<Z> *p)
+    {
+        if (p != nullptr) {
+            p->enable_sharing_from_this(*this);
         }
     }
 
