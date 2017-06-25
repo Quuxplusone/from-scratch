@@ -1,6 +1,6 @@
 #pragma once
 
-#include "scratch/bits/smart-ptrs/unique-ptr.h"
+#include "scratch/bits/aligned-storage/aligned-storage.h"
 #include "scratch/bits/stdexcept/bad-any-cast.h"
 #include "scratch/bits/type-traits/decay.h"
 #include "scratch/bits/type-traits/enable-if.h"
@@ -11,6 +11,7 @@
 #include "scratch/bits/utility/in-place-type.h"
 
 #include <initializer_list>
+#include <new>
 #include <typeinfo>
 #include <utility>
 
@@ -24,22 +25,37 @@ template<typename T> struct is_in_place_type : false_type {};
 template<typename T> struct is_in_place_type<in_place_type_t<T>> : true_type {};
 template<typename T> inline constexpr bool is_in_place_type_v = is_in_place_type<T>::value;
 
-struct any_impl_base {
-    virtual void copy_to(any&) const = 0;
-    virtual const std::type_info& type() const = 0;
-    virtual void *get_data() const = 0;
-    virtual ~any_impl_base() = default;
+enum class any_impl_behavior_e {
+    TYPE,
+    DATA,
+    COPY_TO,
+    MOVE_TO,
+    DESTROY,
 };
 
-template<typename T>
-struct any_impl : any_impl_base {
-    void copy_to(any&) const override;
-    const std::type_info& type() const override { return typeid(T); }
-    void *get_data() const override { return (void *)(&m_data); }
-
-    template<typename... Args> any_impl(Args&&... args) : m_data(std::forward<Args>(args)...) {}
+union any_impl_storage {
 private:
-    T m_data;
+    aligned_storage_t<16, 8> m_inline = {};
+    void *m_large;
+
+    template<class T>
+    static inline constexpr bool fits_inline =
+        sizeof(T) <= sizeof(m_inline) && alignof(T) <= alignof(decltype(m_inline)) && is_nothrow_move_constructible_v<T>;
+
+public:
+    constexpr any_impl_storage() noexcept = default;
+
+    template<class T>
+    static void behaviors(any_impl_behavior_e what, any& who, void *p);
+
+    template<class T, class... Args>
+    void emplace(Args&&... args) {
+        if constexpr (fits_inline<T>) {
+            ::new ((void*)&m_inline) T(std::forward<Args>(args)...);
+        } else {
+            m_large = new T(std::forward<Args>(args)...);
+        }
+    }
 };
 
 } // namespace scratch::detail
@@ -47,23 +63,41 @@ private:
 namespace scratch {
 
 class any {
-    unique_ptr<detail::any_impl_base> m_ptr;
+    friend union detail::any_impl_storage;
+
+    void (*m_behaviors)(detail::any_impl_behavior_e, any&, void *) = nullptr;
+    detail::any_impl_storage m_storage;
+
+    void *get_data() const {
+        void *result = nullptr;
+        if (has_value()) {
+            m_behaviors(detail::any_impl_behavior_e::DATA, const_cast<any&>(*this), &result);
+        }
+        return result;
+    }
+
 public:
     constexpr any() noexcept = default;
     any(const any& rhs) {
         if (rhs.has_value()) {
-            rhs.m_ptr->copy_to(*this);
+            rhs.m_behaviors(detail::any_impl_behavior_e::COPY_TO, const_cast<any&>(rhs), this);
         }
     }
-    any(any&& rhs) {
-        m_ptr = std::move(rhs.m_ptr);
+    any(any&& rhs) noexcept {
+        if (rhs.has_value()) {
+            rhs.m_behaviors(detail::any_impl_behavior_e::MOVE_TO, rhs, this);
+        }
     }
     any& operator=(const any& rhs) {
         any(rhs).swap(*this);
         return *this;
     }
-    any& operator=(any&& rhs) {
-        any(std::move(rhs)).swap(*this);
+    any& operator=(any&& rhs) noexcept {
+        if (rhs.has_value()) {
+            rhs.m_behaviors(detail::any_impl_behavior_e::MOVE_TO, rhs, this);
+        } else {
+            reset();
+        }
         return *this;
     }
     ~any() = default;
@@ -94,31 +128,46 @@ public:
     }
 
     bool has_value() const noexcept {
-        return (m_ptr != nullptr);
+        return (m_behaviors != nullptr);
     }
 
     const std::type_info& type() const noexcept {
-        return m_ptr ? m_ptr->type() : typeid(void);
+        if (has_value()) {
+            const std::type_info *result = nullptr;
+            m_behaviors(detail::any_impl_behavior_e::TYPE, const_cast<any&>(*this), &result);
+            return *result;
+        } else {
+            return typeid(void);
+        }
     }
 
     template<class T, class... Args>
     T& emplace(Args&&... args) {
-        m_ptr = make_unique<detail::any_impl<T>>(std::forward<Args>(args)...);
-        return *static_cast<T*>(m_ptr->get_data());
+        reset();
+        m_storage.emplace<T>(std::forward<Args>(args)...);
+        m_behaviors = detail::any_impl_storage::behaviors<T>;
+        return *static_cast<T*>(get_data());
     }
 
     template<class T, class U, class... Args>
     T& emplace(std::initializer_list<U> il, Args&&... args) {
-        m_ptr = make_unique<detail::any_impl<T>>(il, std::forward<Args>(args)...);
-        return *static_cast<T*>(m_ptr->get_data());
+        reset();
+        m_storage.emplace<T>(il, std::forward<Args>(args)...);
+        m_behaviors = detail::any_impl_storage::behaviors<T>;
+        return *static_cast<T*>(get_data());
     }
 
     void reset() noexcept {
-        m_ptr = nullptr;
+        if (has_value()) {
+            m_behaviors(detail::any_impl_behavior_e::DESTROY, *this, nullptr);
+        }
+        m_behaviors = nullptr;
     }
 
     void swap(any& rhs) noexcept {
-        m_ptr.swap(rhs.m_ptr);
+        any temp = std::move(rhs);
+        rhs = std::move(*this);
+        *this = std::move(temp);
     }
 
     template<class T> friend const T *any_cast(const any *a) noexcept;
@@ -128,13 +177,13 @@ public:
 template<class T>
 const T *any_cast(const any *a) noexcept {
     if (a->type() != typeid(T)) return nullptr;
-    return (const T *)(a->m_ptr->get_data());
+    return (const T *)(a->get_data());
 }
 
 template<class T>
 T *any_cast(any *a) noexcept {
     if (a->type() != typeid(T)) return nullptr;
-    return (T *)(a->m_ptr->get_data());
+    return (T *)(a->get_data());
 }
 
 template<class T>
@@ -162,10 +211,32 @@ T any_cast(any&& a) {
 
 namespace scratch::detail {
 
-template<typename T>
-void any_impl<T>::copy_to(any& destination) const
+template<class T>
+void any_impl_storage::behaviors(any_impl_behavior_e what, any& who, void *p)
 {
-    destination.emplace<T>(m_data);
+    void *data = fits_inline<T> ? &who.m_storage.m_inline : who.m_storage.m_large;
+    switch (what) {
+        case any_impl_behavior_e::TYPE:
+            *(const std::type_info**)p = &typeid(T);
+            break;
+        case any_impl_behavior_e::DATA:
+            *(void**)p = data;
+            break;
+        case any_impl_behavior_e::COPY_TO:
+            ((any*)p)->emplace<T>(*(T*)data);
+            break;
+        case any_impl_behavior_e::MOVE_TO:
+            ((any*)p)->emplace<T>(std::move(*(T*)data));
+            who.reset();
+            break;
+        case any_impl_behavior_e::DESTROY:
+            if constexpr (fits_inline<T>) {
+                ((T *)data)->~T();
+            } else {
+                delete (T*)who.m_storage.m_large;
+            }
+            break;
+    }
 }
 
 } // namespace scratch::detail
