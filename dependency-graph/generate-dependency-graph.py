@@ -9,7 +9,7 @@ import subprocess
 def allow_std_identifier_from_header(ident, std_header):
     allowed = {
         '<atomic>': ['std::atomic'],
-        '<cstddef>': ['ptrdiff_t', 'size_t'],
+        '<cstddef>': ['ptrdiff_t', 'size_t', 'std::max_align_t'],
         '<exception>': ['std::current_exception', 'std::exception_ptr', 'std::rethrow_exception'],
         '<initializer_list>': ['std::initializer_list'],
         '<new>': ['::new', '::operator new', '::operator delete', 'std::align_val_t', 'std::bad_alloc'],
