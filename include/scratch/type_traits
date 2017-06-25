@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bits/aligned-storage/aligned-storage.h"
 #include "bits/type-traits/add-foo.h"
 #include "bits/type-traits/compiler-magic.h"
 #include "bits/type-traits/conditional.h"
