@@ -1,1 +1,6 @@
 #pragma once
+
+#include "bits/memory-resource/memory-resource.h"
+#include "bits/memory-resource/new-delete-resource.h"
+#include "bits/memory-resource/null-memory-resource.h"
+#include "bits/memory-resource/set-default-resource.h"
