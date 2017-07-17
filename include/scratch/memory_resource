@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bits/containers/polymorphic-allocator.h"
 #include "bits/memory-resource/memory-resource.h"
 #include "bits/memory-resource/monotonic-buffer-resource.h"
 #include "bits/memory-resource/new-delete-resource.h"
