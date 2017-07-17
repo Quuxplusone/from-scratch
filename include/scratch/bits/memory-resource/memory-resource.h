@@ -6,25 +6,30 @@
 
 namespace scratch::pmr {
 
-class memory_resource {
+template<class VoidPtr>
+class fancy_memory_resource {
 public:
-    void *allocate(size_t bytes, size_t align = alignof(max_align_t)) {
+    VoidPtr allocate(size_t bytes, size_t align = alignof(max_align_t)) {
         return do_allocate(bytes, align);
     }
-    void deallocate(void *p, size_t bytes, size_t align = alignof(max_align_t)) {
+    void deallocate(VoidPtr p, size_t bytes, size_t align = alignof(max_align_t)) {
         return do_deallocate(p, bytes, align);
     }
-    bool is_equal(const memory_resource& rhs) const noexcept {
+    bool is_equal(const fancy_memory_resource& rhs) const noexcept {
         return do_is_equal(rhs);
     }
-    virtual ~memory_resource() = default;
+    virtual ~fancy_memory_resource() = default;
 private:
-    virtual void *do_allocate(size_t bytes, size_t align) = 0;
-    virtual void do_deallocate(void *p, size_t bytes, size_t align) = 0;
-    virtual bool do_is_equal(const memory_resource& rhs) const noexcept = 0;
+    virtual VoidPtr do_allocate(size_t bytes, size_t align) = 0;
+    virtual void do_deallocate(VoidPtr p, size_t bytes, size_t align) = 0;
+    virtual bool do_is_equal(const fancy_memory_resource& rhs) const noexcept = 0;
 };
 
-bool operator==(const memory_resource& a, const memory_resource& b) noexcept { return &a == &b || a.is_equal(b); }
-bool operator!=(const memory_resource& a, const memory_resource& b) noexcept { return !(a == b); }
+template<class P>
+bool operator==(const fancy_memory_resource<P>& a, const fancy_memory_resource<P>& b) noexcept { return &a == &b || a.is_equal(b); }
+template<class P>
+bool operator!=(const fancy_memory_resource<P>& a, const fancy_memory_resource<P>& b) noexcept { return !(a == b); }
+
+using memory_resource = fancy_memory_resource<void*>;
 
 } // namespace scratch::pmr
