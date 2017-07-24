@@ -1,5 +1,8 @@
 #pragma once
 
+#include "scratch/bits/type-traits/enable-if.h"
+#include "scratch/bits/type-traits/false-v.h"
+#include "scratch/bits/type-traits/is-foo.h"
 #include "scratch/bits/type-traits/priority-tag.h"
 #include "scratch/bits/utility/declval.h"
 
@@ -23,6 +26,17 @@ auto pointer_rebind(Ptr&, priority_tag<1>) -> typename Ptr::template rebind<U>;
 template<class U, template<class...> class SomePointer, class T, class... Vs>
 auto pointer_rebind(SomePointer<T, Vs...>&, priority_tag<0>) -> SomePointer<U, Vs...>;
 
+template<class P, class T>
+auto pointer_to_impl(T& r, priority_tag<1>) -> decltype(P::pointer_to(r))
+{
+    return P::pointer_to(r);
+}
+
+template<class P, class T>
+P pointer_to_impl(T&, priority_tag<0>) {
+    static_assert(false_v<T>, "Pointer-like type P does not provide a static member function pointer_to(p)");
+}
+
 } // namespace scratch::detail
 
 namespace scratch {
@@ -37,6 +51,11 @@ struct pointer_traits
 
     template<class U> using rebind =
         decltype(detail::pointer_rebind<U>(declval<Ptr&>(), priority_tag<1>{}));
+
+    template<class U>
+    static auto pointer_to(U& r) {
+        return detail::pointer_to_impl<Ptr>(r, priority_tag<1>{});
+    }
 };
 
 template<class T>
@@ -47,6 +66,11 @@ struct pointer_traits<T*>
     using difference_type = ptrdiff_t;
 
     template<class U> using rebind = U*;
+
+    template<bool B = !is_void_v<T>>
+    static auto pointer_to(enable_if_t<B, T>& r) {
+        return &r;
+    }
 };
 
 } // namespace scratch
