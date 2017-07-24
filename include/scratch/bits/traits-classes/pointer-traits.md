@@ -100,3 +100,40 @@ Clang's libc++ containers actually go out of their way to do iteration
 does iteration on fancy pointers all the time; e.g. in `vector::resize`. So if
 you want your fancy pointers to work on libstdc++, you'd better make sure they're
 safe for use as iterators.
+
+What about `addressof`?
+-----------------------
+
+In this library, I'm taking the position that no sane type will ever overload
+unary `operator&`, and so I don't need to pay attention to `std::addressof`.
+If I have an object and I want its address, I write `&x`. If I have an iterator
+and I want the address of the thing pointed to, I write `&*it`. If I have a
+fancy pointer and I want a raw-pointer version of it, I write
+`static_cast<T*>(fancyptr)`. Notice that in the last of these cases, `&*fancyptr`
+would be incorrect and dangerous, if `fancyptr` happened to be a null pointer,
+or to point one past the end of an array, or what-have-you.
+
+Therefore, if you are implementing a fancy pointer type, you must make sure
+that you give it an `explicit operator T*() const`.
+
+What about `pointer_to`?
+------------------------
+
+In general, you don't need to implement `pointer_to(T&)` for your
+pointer type unless you specifically want to use your pointer type with
+containers that require the ability to convert a raw pointer address
+into a fancy pointer. Generally this is done only in containers that
+are both node-based and bidirectional-iterable; that is, we must be in
+the habit of storing nodes' addresses in fancy pointers, and then we must
+have the need for a unique "past-the-end" node.
+
+This "past-the-end" node will not be allocated; it will be stored inline
+in the container's member data. Thus we'll have its address as a raw pointer
+(because it was never allocated by an allocator, and thus has no natural
+fancy-pointer representation); but we'll need to store its address into
+the "`next` pointer" of the end-minus-one node, which of course will be
+shaped like a fancy pointer.
+
+Containers which work this way include `list`, `set`, `map`, `unordered_set`,
+and `unordered_map`, but notably not `forward_list` (because it doesn't
+need any "past-the-end" node) and not `vector` (because it is not node-based).
