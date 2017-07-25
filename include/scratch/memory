@@ -12,3 +12,5 @@
 #include "bits/stdexcept/bad-weak-ptr.h"
 #include "bits/traits-classes/allocator-traits.h"
 #include "bits/traits-classes/pointer-traits.h"
+#include "bits/type-traits/allocator-arg.h"
+#include "bits/type-traits/uses-allocator.h"
