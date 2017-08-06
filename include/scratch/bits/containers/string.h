@@ -6,6 +6,7 @@
 #include "scratch/bits/containers/allocator.h"
 #include "scratch/bits/stdexcept/stdexcept.h"
 #include "scratch/bits/traits-classes/allocator-traits.h"
+#include "scratch/bits/traits-classes/char-traits.h"
 #include "scratch/bits/traits-classes/is-foo-iterator.h"
 #include "scratch/bits/type-traits/is-fooible.h"
 #include "scratch/bits/utility/compressed-pair.h"
@@ -25,12 +26,13 @@ inline T *empty_string() {
 
 namespace scratch {
 
-template<class T, class Alloc = allocator<T>>
+template<class T, class Traits = char_traits<T>, class Alloc = allocator<T>>
 class basic_string {
     static_assert(is_pod_v<T>, "Non-POD types are not allowed as character types");
     using Alloc_traits = allocator_traits<Alloc>;
 public:
     using value_type = T;
+    using traits_type = Traits;
     using allocator_type = Alloc;
     using size_type = typename Alloc_traits::size_type;
     using difference_type = typename Alloc_traits::difference_type;
@@ -56,7 +58,7 @@ public:
         if (count > max_size()) throw length_error(exception::nocopy, "basic_string constructor");
         m_data() = Alloc_traits::allocate(m_allocator(), count + 1);
         for (size_t i=0; i < count + 1; ++i) {
-            data()[i] = T();
+            Traits::assign(data()[i], T());
         }
         m_size = count;
         m_capacity = count;
@@ -65,7 +67,7 @@ public:
         this->assign(count, value);
     }
     explicit basic_string(const T *s, Alloc a) : basic_string(std::move(a)) {
-        this->assign(s, s + strlen(s));
+        this->assign(s, s + Traits::length(s));
     }
     explicit basic_string(const basic_string& s, size_type pos, Alloc a) : basic_string(s, pos, npos, std::move(a)) {}
     explicit basic_string(const basic_string& s, size_type pos, size_type n, Alloc a) : basic_string(std::move(a)) {
@@ -165,11 +167,10 @@ public:
             pointer new_data = Alloc_traits::allocate(m_allocator(), cap + 1);
             if (m_data()) {
                 T *new_begin = static_cast<T *>(new_data);
-                scratch::copy(begin(), end() + 1, new_begin);
+                Traits::copy(new_begin, data(), size() + 1);
                 Alloc_traits::deallocate(m_allocator(), m_data(), capacity() + 1);
             }
-            using std::swap;
-            swap(m_data(), new_data);
+            m_data() = new_data;
             m_capacity = cap;
         }
     }
@@ -181,7 +182,7 @@ public:
     void resize(size_t n, const T& value) {
         if (n > size()) {
             reserve(n);
-            scratch::fill(begin() + m_size, begin() + n, value);
+            Traits::assign(data() + size(), n - size(), value);
         }
         data()[n] = T();
         m_size = n;
@@ -200,7 +201,7 @@ public:
     }
 
     auto& assign(const basic_string& s) { return assign(s.begin(), s.end()); }
-    auto& assign(const T *s) { return assign(s, strlen(s)); }
+    auto& assign(const T *s) { return assign(s, Traits::length(s)); }
     auto& assign(const T *s, size_type n) { return assign(s, s + n); }
 
     template<class It>
@@ -325,24 +326,24 @@ private:
     const Alloc& m_allocator() const noexcept { return get<1>(m_data_and_allocator); }
 };
 
-template<class T, class A>
-void swap(basic_string<T, A>& lhs, basic_string<T, A>& rhs) noexcept {
+template<class T, class C, class A>
+void swap(basic_string<T, C, A>& lhs, basic_string<T, C, A>& rhs) noexcept {
     lhs.swap(rhs);
 }
 
-template<class T, class A>
-basic_string<T,A> operator+ (basic_string<T,A> lhs, const basic_string<T,A>& rhs) {
+template<class T, class C, class A>
+basic_string<T,C,A> operator+ (basic_string<T,C,A> lhs, const basic_string<T,C,A>& rhs) {
     lhs += rhs;
     return lhs;
 }
-template<class T, class A>
-basic_string<T,A> operator+ (basic_string<T,A> lhs, const T *rhs) {
+template<class T, class C, class A>
+basic_string<T,C,A> operator+ (basic_string<T,C,A> lhs, const T *rhs) {
     lhs += rhs;
     return lhs;
 }
-template<class T, class A>
-basic_string<T,A> operator+ (const T *lhs, const basic_string<T,A>& rhs) {
-    basic_string<T,A> lhs_str(lhs);
+template<class T, class C, class A>
+basic_string<T,C,A> operator+ (const T *lhs, const basic_string<T,C,A>& rhs) {
+    basic_string<T,C,A> lhs_str(lhs);
     lhs_str += rhs;
     return lhs_str;
 }
