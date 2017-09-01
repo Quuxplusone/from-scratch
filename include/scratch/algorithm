@@ -1,3 +1,4 @@
 #pragma once
 
 #include "bits/algorithm/copy.h"
+#include "bits/algorithm/generate.h"
