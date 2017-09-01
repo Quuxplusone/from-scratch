@@ -1,1 +1,5 @@
 #pragma once
+
+#include "bits/random/linear-congruential-engine.h"
+#include "bits/random/random-device.h"
+#include "bits/random/seed-seq.h"
