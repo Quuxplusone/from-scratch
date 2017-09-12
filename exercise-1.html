@@ -1,0 +1,164 @@
+<html>
+<head>
+<title>Exercise 1</title>
+</head>
+<body>
+<h2>Exercise 1. Hello world!</h2>
+
+<p>
+Welcome to the course!
+
+<p>
+We'll be using Wandbox to deliver the code for these exercises.
+Wandbox is an online C++ compiler; that is, it's a Web interface to a plain old C++ compiler
+running somewhere on the back-end. Wandbox supports both GCC and Clang.
+
+<p>
+Wandbox lets you type in some C++ code and hit "Run" to compile and run it. After you've hit
+"Run", Wandbox also gives you the option to "Share" a permalink to your code. The shareable
+permalink is a <i>snapshot</i> of your code as it appeared when you hit "Share". It is not a
+shared-editing <i>session</i> like a Google Doc. When you or someone else visits the permalink,
+they'll get a copy of the code; modifying the copy won't affect the original. So this makes
+it a great way to distribute the code for these exercises!
+
+<p>
+(In case Wandbox goes down during the class, I've got backup copies of all the code on this
+website. The raw .cc files are linked right next to the links to Wandbox. If GitHub goes
+down during the class, we'll have trouble.)
+
+<p>
+The upside is that you can edit the code at these permalinks any way you want; your solutions
+will be visible only to you, not to everyone. The downside is that I won't be able to see
+your solutions either, unless I come look over your shoulder. So I have no very good way of
+finding out when everyone's done with the exercise, nor if anyone's stumped.
+
+<p>
+Before each exercise set, I'll set my phone's timer for 10 minutes. If it looks like I'm
+forgetting to do this, please remind me!
+
+<p>
+If you're completely stumped after a few minutes, feel free to raise your hand and I'll
+come over to you. (Or one of your fellow classmates might see your hand first and be able
+to help!)
+
+<p>
+If you're done before the timer is up, feel free to play around in Wandbox, or do your own
+stuff. Each page of exercises ends with some random links to blog posts that I think are
+worth passing along to you.
+
+
+<h3>Exercise 1a. Hello wandbox</h3>
+
+<p>
+Open <a href="https://wandbox.org/permlink/S9IkjTPPIJBioZhU">this link</a>
+(<a href="1a.cc">backup</a>).
+You should see a "hello world" program.
+
+<p>
+1. Find the "Run" button and click it to run the code.
+
+<p>
+2. Edit the code so that it prints "Hello wandbox" instead of "Hello world". Run it again,
+using the compiler of your choice.
+
+<p>
+3. Find the "Share" button and click it to get a permalink to your "Hello wandbox" code.
+
+<p>
+4. (Optional) Email your permalink to <code>Arthur O'Dwyer &lt;arthur.j.odwyer@gmail.com&gt;</code>.
+I won't be checking my email as part of the class, but now we'll have each other's email
+addresses if you want to ask any followup questions during or after this week's conference.
+
+
+<h3>Exercise 1b. Multiple files on Wandbox</h3>
+
+<p>
+Open <a href="https://wandbox.org/permlink/8OVhQsgezJKQXkMS">this wandbox</a>
+(<a href="1b-main.cc">backup</a>, <a href="1b-beta.h">backup</a>).
+
+<p>
+1. Try to run the code. It should give you a compiler warning and a linker error.
+
+<p>
+2. Fix the compiler warning by adding the missing <code>", %d"</code> to the format string.
+
+<p>
+3. Fix the linker error by adding a new file to the wandbox. Click the heavy "+" icon
+next to the "beta.h" tab. Click "noname-3" to switch to that tab. Click it again to
+rename the new file; enter its new name as "beta.cc". Fill in "beta.cc" yourself with
+something that will make the program work.
+
+<p>
+Look at the left sidebar, under "Compiler Options". Notice that there are already three
+custom compiler options there: <code>-W -Wall -pedantic</code>. Add <code>beta.cc</code>
+to the list of compiler options so that Wandbox knows it's supposed to compile it.
+Click "Run" to compile and run your multiple-file program!
+
+
+<h3>Exercise 1c. Experimental options</h3>
+
+<p>
+Open <a href="https://wandbox.org/permlink/MhVx9gNtnuGUXCON">this wandbox</a>
+(<a href="1c.cc">backup</a>). This program uses the
+<a href="http://en.cppreference.com/w/cpp/language/constraints">"Concepts Lite" syntax</a>
+currently available in a Technical Specification and slated for inclusion in C++20.
+This syntax is <i>not</i> standard C++17, but the GCC compiler can support it under
+an extension flag.
+
+<p>
+1. Change the compiler from Clang to GCC, and add the flag <code>-fconcepts</code>
+to GCC's compiler options. Run the code. (It should work.)
+
+
+<h3>Exercise 1d. Godbolt and Rextester</h3>
+
+<p>
+Open <a href="https://godbolt.org/g/X6gEaL">this godbolt</a> (<a href="1a.cc">backup</a>).
+Godbolt, unlike Wandbox, shows you the assembly output of the compiler.
+Wandbox, unlike Godbolt, can actually link and run the program remotely.
+
+<p>
+1. At the top of the right pane, you can change the compiler. Change it to "x86-64 gcc (trunk)".
+Notice that the assembly output instantly refreshes; there is no "Run" button on Godbolt.
+
+<p>
+2. Change the compiler options to include <code>-O3</code>. Notice that the assembly output
+refreshes --- and it gets much shorter!
+
+<p>
+3. Change the compiler to "x86-64 CL 19 2017 RTW". This impenetrable acronym means
+"Visual Studio 2017." Godbolt supports not just GCC and Clang but also Microsoft Visual Studio
+and Intel ICC. (It also supports <a href="https://www.zapcc.com">Zapcc</a> which is just
+a faster version of Clang.)
+
+<p>
+4. Click the "Share" dropdown in the upper right corner of the screen to get a shareable
+permalink to your Visual Studio codegen.
+
+<p>
+5. Play around with the six blue/gray buttons underneath the compiler-selection dropdown.
+They change the filter applied to the assembly code: exclude comments, flatten whitespace,
+show machine code, et cetera. I don't know what they all do. The settings I picked for
+this exercise seem like the cleanest ones.
+
+<p>
+6. Open <a href="http://rextester.com/ATF90700">this rextester</a> (<a href="1a.cc">backup</a>).
+Click the "Run it" button below the source-code entry box. Edit the program to print
+"hello rextester" instead of "hello world". Click "Run it". Click "Share it" to get a
+shareable permalink.
+
+<p>
+As far as I know, Rextester is the only freely accessible online compiler service that supports
+both <i>running the code</i> and <i>compiling with Visual Studio</i>. But I think its version
+of Visual Studio is pretty old.
+
+<p>
+You're done with the first set of exercises! Sit back and relax, or optionally,
+read the following blog post.
+
+<ul>
+<li><a href="http://www.gotw.ca/publications/mill02.htm">"What's In a Class? The Interface Principle." Herb Sutter, 1998.</a></li>
+</ul>
+
+</body>
+</html>
