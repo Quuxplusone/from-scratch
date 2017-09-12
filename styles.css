@@ -1,0 +1,7 @@
+@media screen and (min-width: 150mm) {
+    body {
+        margin-left: 25mm;
+        margin-right: 12mm;
+        max-width: 60em;
+    }
+}
