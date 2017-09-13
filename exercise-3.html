@@ -1,0 +1,71 @@
+<html>
+<head>
+<title>Exercise 3</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 3. std::any from scratch.</h2>
+
+<p>
+In this exercise, you will be implementing <code>std::any</code> by removing functionality
+from <code>std::function</code>.
+
+<h3>Exercise 3a. Naive std::function.</h3>
+<p>
+Open <a href="https://wandbox.org/permlink/8zbRId7HtOZOR5Zw">this wandbox</a>
+(<a href="3a-function.cc">backup</a>).
+It contains a fundamentally complete implementation of <code>std::function</code>, with no
+small object optimization.
+
+<p>
+1. Modify the code so that it is an implementation of <code>std::any</code> instead.
+The necessary changes are:
+<ul>
+<li>Remove the template type parameter <code>Signature</code>. <code>class any</code> is
+a concrete class, not a template.</li>
+<li>Remove the special construction logic around <code>nullptr_t</code> and
+<code>is_specialization_of_function_v</code>.</li>
+<li>Remove <code>operator()</code>.</li>
+<li>Remove <code>operator bool</code>.</li>
+<li>Rename <code>target_type()</code> to <code>type()</code>.</li>
+<li>Change the name of the class from <code>function</code> to <code>any</code>.</li>
+<li>Cut-and-paste your code into <a href="">this wandbox</a>
+(<a href="3a-any.cc">backup</a>)
+and run the test cases. Can you make them pass?</li>
+</ul>
+
+<p>
+2. Implement <code>any_cast</code>.
+
+Notice that none of the lambdas have size zero. This is because no C++ object is allowed
+to have size zero. Modify the program so that <code>test</code> prints out <code>"empty"</code>
+for types where <code>std::is_empty_v&lt;F&gt;</code> and <code>"not empty"</code>
+for other types. Run each of the 16 test cases again. Do the results make sense?
+
+<p>
+(The variable template <code>std::is_empty_v&lt;F&gt;</code> is declared in
+<code>&lt;type_traits&gt;</code>. If you're using a pre-C++17 compiler, try
+<code>std::is_empty&lt;F&gt;::value</code> instead.)
+
+<p>
+3. Change the definition of <code>test</code> so that it is no longer a template, but simply
+takes a single parameter of type <code>std::function&lt;int()&gt;</code>. What output do
+you expect now? Do you expect the output to be different between Clang and GCC? Try it.
+Maybe try the same code <a href="http://rextester.com/UPNLNI34850">on Rextester</a>.
+
+
+
+
+<p>
+You're done with the second set of exercises! Sit back and relax, or optionally,
+browse the following blog posts.
+
+<ul>
+<li><a href="http://www.ryanjuckett.com/programming/printing-floating-point-numbers/">"Printing Floating-Point Numbers". Ryan Juckett, 2014.</a></li>
+<li><a href="http://refspecs.linuxbase.org/cxxabi-1.83.html">On the innards of the Linux/OSX C++ object model</a></li>
+<li><a href="http://bit.ly/open-watcom-class-layout">Notes on class layout in MSVC. JWW, 1991.</a></li>
+<li><a href="https://www.openrce.org/articles/full_view/23">"Reversing Microsoft Visual C++ Part II: Classes, Methods and RTTI". igorsk, 2006.</a></li>
+</ul>
+
+</body>
+</html>
