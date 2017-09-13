@@ -10,61 +10,54 @@
 In this exercise, you will be implementing <code>std::any</code> by removing functionality
 from <code>std::function</code>.
 
-<h3>Exercise 3a. Naive std::function.</h3>
 <p>
-Open <a href="https://wandbox.org/permlink/8zbRId7HtOZOR5Zw">this wandbox</a>
-(<a href="3a-function.cc">backup</a>).
-It contains a fundamentally complete implementation of <code>std::function</code>, with no
-small object optimization.
+Open <a href="https://wandbox.org/permlink/eT5T1Ja8zUjR2ezf">this wandbox</a>
+(<a href="3-main.cc">b</a>,
+<a href="3-function.h">b</a>,
+<a href="3-test-function.h">b</a>,
+<a href="3-any.h">b</a>,
+<a href="3-any-cast.h">b</a>,
+<a href="3-test-any.h">b</a>).
+The header file "function.h" contains a fundamentally complete implementation of
+<code>std::function</code> (but without the Small Object Optimization).
+This wandbox also contains a header file named "any.h" that is simply a copy of "function.h".
 
 <p>
-1. Modify the code so that it is an implementation of <code>std::any</code> instead.
+1. Read "function.h" from top to bottom. Does it make sense? Can you match up the
+class definitions in the actual code with the pieces of the diagram from today's
+slide presentation?
+
+<p>
+2. Modify "any.h" so that it is a valid implementation of <code>std::any</code>.
+You can try to do it on your own, or you can follow this checklist.
 The necessary changes are:
 <ul>
 <li>Remove the template type parameter <code>Signature</code>. <code>class any</code> is
 a concrete class, not a template.</li>
-<li>Remove the special construction logic around <code>nullptr_t</code> and
+<li>Rip out the special construction logic dealing with <code>nullptr_t</code> and
 <code>is_specialization_of_function_v</code>.</li>
-<li>Remove <code>operator()</code>.</li>
-<li>Remove <code>operator bool</code>.</li>
-<li>Rename <code>target_type()</code> to <code>type()</code>.</li>
+<li>Rip out <code>operator()</code>.</li>
+<li>Rip out <code>operator bool</code>.</li>
+<li>Rename the method <code>target_type()</code> to <code>type()</code>.</li>
 <li>Change the name of the class from <code>function</code> to <code>any</code>.</li>
-<li>Cut-and-paste your code into <a href="">this wandbox</a>
-(<a href="3a-any.cc">backup</a>)
-and run the test cases. Can you make them pass?</li>
 </ul>
+Run the tests; do they pass? (They should!)
 
 <p>
-2. Implement <code>any_cast</code>.
-
-Notice that none of the lambdas have size zero. This is because no C++ object is allowed
-to have size zero. Modify the program so that <code>test</code> prints out <code>"empty"</code>
-for types where <code>std::is_empty_v&lt;F&gt;</code> and <code>"not empty"</code>
-for other types. Run each of the 16 test cases again. Do the results make sense?
-
-<p>
-(The variable template <code>std::is_empty_v&lt;F&gt;</code> is declared in
-<code>&lt;type_traits&gt;</code>. If you're using a pre-C++17 compiler, try
-<code>std::is_empty&lt;F&gt;::value</code> instead.)
+3. (Optional) Notice that we left <code>any::target()</code> as a public member function,
+whereas in the actual standard library there is no such function (just <code>any_cast</code>).
+Make <code>any::target()</code> a private member function and make <code>any_cast</code> a friend
+of <code>any</code>.
+In your opinion, which interface seems "better": private-member-function-and-friend,
+or public-member-function? Why?
 
 <p>
-3. Change the definition of <code>test</code> so that it is no longer a template, but simply
-takes a single parameter of type <code>std::function&lt;int()&gt;</code>. What output do
-you expect now? Do you expect the output to be different between Clang and GCC? Try it.
-Maybe try the same code <a href="http://rextester.com/UPNLNI34850">on Rextester</a>.
-
-
-
-
-<p>
-You're done with the second set of exercises! Sit back and relax, or optionally,
+You're done with the third set of exercises! Sit back and relax, or optionally,
 browse the following blog posts.
 
 <ul>
-<li><a href="http://www.ryanjuckett.com/programming/printing-floating-point-numbers/">"Printing Floating-Point Numbers". Ryan Juckett, 2014.</a></li>
-<li><a href="http://refspecs.linuxbase.org/cxxabi-1.83.html">On the innards of the Linux/OSX C++ object model</a></li>
-<li><a href="http://bit.ly/open-watcom-class-layout">Notes on class layout in MSVC. JWW, 1991.</a></li>
-<li><a href="https://www.openrce.org/articles/full_view/23">"Reversing Microsoft Visual C++ Part II: Classes, Methods and RTTI". igorsk, 2006.</a></li>
+<li><a href="http://www.gotw.ca/publications/mill02.htm">"What's In a Class? The Interface Principle." Herb Sutter, 1998.</a></li>
+<li><a href="https://outflux.net/blog/archives/2011/12/22/abusing-the-file-structure/">"Abusing the FILE structure." Kees Cook, 2011.</a></li>
 </ul>
 
 </body>
