@@ -1,9 +1,8 @@
 #pragma once
 
-#include "scratch/bits/concurrency/condition-variable.h"
-#include "scratch/bits/concurrency/mutex.h"
-#include "scratch/bits/concurrency/unique-lock.h"
+#include "scratch/bits/concurrency/linux-futex.h"
 
+#include <atomic>
 #include <utility>
 
 namespace scratch {
@@ -13,34 +12,28 @@ class once_flag {
     static constexpr int IN_PROGRESS = 1;
     static constexpr int DONE = 2;
 
-    mutex m_mtx;
-    condition_variable m_cv;
-    int m_flag;
+    std::atomic<int> m_futex;
 public:
-    constexpr once_flag() noexcept : m_flag(UNDONE) {}
+    constexpr once_flag() noexcept : m_futex(UNDONE) {}
 
     template<class F, class... Args>
     void call_once(F&& f, Args&&... args)
     {
-        unique_lock<mutex> lk(m_mtx);
-        while (m_flag == IN_PROGRESS) {
-            m_cv.wait(lk);
+        int x = UNDONE;
+        while (!m_futex.compare_exchange_weak(x, IN_PROGRESS)) {
+            if (x == DONE) return;
+            futex_wait(&m_futex, IN_PROGRESS);
+            x = UNDONE;
         }
-        if (m_flag == UNDONE) {
-            m_flag = IN_PROGRESS;
-            lk.unlock();
-            try {
-                std::forward<F>(f)(std::forward<Args>(args)...);
-            } catch (...) {
-                lk.lock();
-                m_flag = UNDONE;
-                m_cv.notify_one();
-                throw;
-            }
-            lk.lock();
-            m_flag = DONE;
-            m_cv.notify_all();
+        try {
+            std::forward<F>(f)(std::forward<Args>(args)...);
+        } catch (...) {
+            m_futex = UNDONE;
+            futex_wake_one(&m_futex);
+            throw;
         }
+        m_futex = DONE;
+        futex_wake_all(&m_futex);
     }
 };
 
