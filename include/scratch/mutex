@@ -2,5 +2,6 @@
 
 #include "bits/concurrency/lock-guard.h"
 #include "bits/concurrency/mutex.h"
+#include "bits/concurrency/once-flag.h"
 #include "bits/concurrency/tag-types.h"
 #include "bits/concurrency/unique-lock.h"
