@@ -1,0 +1,56 @@
+<html>
+<head>
+<title>Exercise 4</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 4. std::mutex from scratch.</h2>
+
+<p>
+This exercise is supposed to drive home the proper usage of a mutex&ndash;condition-variable pair
+to protect access to shared data.
+
+<p>
+Open <a href="https://wandbox.org/permlink/8lURJet879iGmrTF">this wandbox</a>
+(<a href="4.cc">backup</a>). You'll see an implementation of a "<code>ThreadSafeStack</code>"
+that may or may not actually be thread-safe.
+
+<p>
+1. Read the definitions of <code>push</code> and <code>blocking_pop</code>. (Ignore the
+letter <code>Y</code> in the margin.) Read the test case in <code>main</code>; figure out
+what it's testing for. Does it make sense? Run the code. Does it seem to work? (It should.)
+
+<p>
+2. Now look at the <code>Y</code> in the margin. In the "Compiler Options" on Wandbox, replace
+<code>-DY=</code> with <code>-DY=std::this_thread::yield();</code> and re-run the code.
+It segfaults! This shows that the original code has a bug, and the bug manifests itself
+only when a context-switch happens at exactly the right time.
+
+<p>
+3. Given what you know about the proper use of <code>mutex</code> and <code>condition_variable</code>,
+find and fix the bug. (Your fix should actually make the code shorter and simpler.) When you're
+done, run the code again; it should no longer segfault, with or without the calls to
+<code>yield</code>.
+
+<p>
+4. (Optional) This "<code>ThreadSafeStack&lt;T&gt;</code>" is somewhat dangerous, because
+lines 20, 30, and 31 all run user-supplied code under a mutex lock. Imagine, or write,
+a <code>class Widget</code> such that <code>ThreadSafeStack&lt;Widget&gt;</code> would
+misbehave (deadlock, segfault, etc).
+
+<p>
+5. (Optional) Browse the code for concurrency primitives in Arthur's
+<a href="https://github.com/Quuxplusone/from-scratch/tree/master/include/scratch/bits/concurrency">from-scratch repo</a>.
+You might particularly want to read <a href="https://github.com/Quuxplusone/from-scratch/blob/master/include/scratch/bits/concurrency/mutex.md">mutex.md</a>.
+
+<p>
+You're done with the fourth set of exercises! Sit back and relax, or optionally,
+browse the following blog posts.
+
+<ul>
+<li><a href="https://www.akkadia.org/drepper/futex.pdf">"Futexes Are Tricky." Ulrich Drepper, 2011.</a></li>
+<li><a href="https://www.remlab.net/op/futex-misc.shtml">"Other uses of futex." Rémi Denis-Courmont, 2016.</a></li>
+</ul>
+
+</body>
+</html>
