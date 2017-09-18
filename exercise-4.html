@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<h2>Exercise 4. std::mutex from scratch.</h2>
+<h2>Exercise 4. Mutexes from scratch.</h2>
 
 <p>
 This exercise is supposed to drive home the proper usage of a mutex&ndash;condition-variable pair
@@ -32,17 +32,19 @@ find and fix the bug. (Your fix should actually make the code shorter and simple
 done, run the code again; it should no longer segfault, with or without the calls to
 <code>yield</code>.
 
+<h3>Exercise 4b. Running user code under a lock</h3>
 <p>
-4. (Optional) This "<code>ThreadSafeStack&lt;T&gt;</code>" is somewhat dangerous, because
+1. (Optional) This "<code>ThreadSafeStack&lt;T&gt;</code>" is somewhat dangerous, because
 lines 20, 30, and 31 all run user-supplied code under a mutex lock. Imagine, or write,
 a <code>class Widget</code> such that <code>ThreadSafeStack&lt;Widget&gt;</code> would
 misbehave (deadlock, segfault, etc).
 
 <p>
-5. (Optional) Browse the code for concurrency primitives in Arthur's
+2. (Optional) Browse the code for concurrency primitives in Arthur's
 <a href="https://github.com/Quuxplusone/from-scratch/tree/master/include/scratch/bits/concurrency">from-scratch repo</a>.
 You might particularly want to read <a href="https://github.com/Quuxplusone/from-scratch/blob/master/include/scratch/bits/concurrency/mutex.md">mutex.md</a>.
 
+<hr>
 <p>
 You're done with this set of exercises! Sit back and relax, or optionally,
 browse the following blog posts.

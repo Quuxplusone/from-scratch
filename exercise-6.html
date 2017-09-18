@@ -1,0 +1,63 @@
+<html>
+<head>
+<title>Exercise 6</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 6. Futures from scratch.</h2>
+
+<p>
+Open <a href="https://wandbox.org/permlink/k9QHDPkKNaQbitgG">this wandbox</a>
+(<a href="6-future.h">b</a>, <a href="6-shared-future.h">b</a>, <a href="6-test-unshared.h">b</a>,
+<a href="6-test-shared.h">b</a>). It contains an implementation of <code>std::promise&lt;T&gt;</code>
+and <code>std::future&lt;T&gt;</code> for object types (i.e., not references or void types).
+
+<h3>Exercise 6a. <code>shared_future</code> from scratch</h3>
+
+<p>
+1. There are two test files provided: "test-shared.cc" and "test-unshared.cc". The latter works.
+The former doesn't work, because <code>shared_future&lt;T&gt;</code> is not implemented.
+A synopsis for <code>shared_future</code> is provided in "shared-future.h".
+Implement <code>shared_future</code> from scratch.
+
+<p>
+2. Compare the signatures <code>T future::get()</code> and <code>const T& shared_future::get()</code>.
+Why are they different?
+
+<p>
+3. Recall our discussion of what it means to "move-from" an object. Recall that the move-constructor
+of <code>shared_ptr</code> nulls out its source operand. What should the move-constructor of
+<code>shared_future</code> do: preserve its source, null it out, or leave it in an unspecified state?
+What are the pros and cons of each approach? What does the standard library actually do? (Check
+cppreference.)
+
+
+<h3>Exercise 6b. <code>~promise</code> from scratch</h3>
+<p>
+1. (Optional) There is code in <code>~promise()</code> to satisfy the standard's requirement that
+a future should never wait forever on a destroyed promise, but instead the future should become ready
+with a <code>broken_promise</code> exception. (Yes, that's really the name of the error code!)
+However, the code in the wandbox is commented out, because it depends on the function
+<code>promise::ready()</code>, which is not implemented. Uncomment this code and get it working.
+If you can get it working <i>without</i> implementing <code>ready()</code>, tell Arthur about it!
+
+<h3>Exercise 6c. Running user code under a lock</h3>
+<p>
+Recall from Exercise 4b that running user-supplied code under a lock is not generally safe.
+
+<p>
+1. (Optional) Read the bug report at the bottom of this page. Reproduce it using our toy implementation
+of promise/future. Then, fix it!
+
+<hr>
+<p>
+You're done with this set of exercises! Sit back and relax, or optionally,
+browse the following bug report.
+
+<ul>
+<li><a href="https://bugs.llvm.org/show_bug.cgi?id=24692">PR24692. "promise/future deadlock." Agustín Bergé, 2015.</a></li>
+</ul>
+
+
+</body>
+</html>
