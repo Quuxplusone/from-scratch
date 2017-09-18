@@ -1,0 +1,72 @@
+<html>
+<head>
+<title>Exercise 9</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 9. Algorithms from scratch.</h2>
+
+<p>
+Open <a href="https://wandbox.org/permlink/T9f85csezkvoPXnD">this wandbox</a>
+(<a href="9a-main.cc">backup</a>). You'll see an implementation of std::find.
+
+<p>
+1. Fill in the blanks to implement <code>std::count</code> and <code>std::count_if</code>.
+Run the test cases; they should pass.
+
+<p>
+2. Can you reimplement <code>std::find</code> in terms of <code>std::find_if</code>, and
+reimplement <code>std::count</code> <i>in terms of</i> <code>count_if</code>? (Yes.)
+What are the advantages and disadvantages (if any) of doing so?
+
+<p>
+3. The provided implementation of <code>std::count</code> returns <code>size_t</code>.
+The Standard Library's version actually returns <code>iterator_traits&lt;It&gt;::difference_type</code>.
+Adjust your implementation to return <code>difference_type</code> as well.
+
+<p>
+If you haven't worked much with template programming before, you might run into the
+following syntax error:
+
+<pre>
+error: missing 'typename' prior to dependent type name 'std::iterator_traits&lt;It&gt;::difference_type'
+std::iterator_traits&lt;It&gt;::difference_type count_if(It first, It last, const F& predicate)
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+typename
+</pre>
+
+or with GCC,
+
+<pre>
+error: need 'typename' before 'std::iterator_traits&lt;_Iterator&gt;::difference_type'
+because 'std::iterator_traits&lt;_Iterator&gt;' is a dependent scope
+ std::iterator_traits&lt;It&gt;::difference_type count_if(It first, It last, const F& predicate)
+ ^~~
+</pre>
+
+Both compilers are good enough to suggest the correct fix: to insert the keyword <code>typename</code>.
+
+<p>
+4. Look at <a href="https://wandbox.org/permlink/QY20901svSD5vYO8">this wandbox</a>
+(<a href="9b.cc">backup</a>). It has a version of <code>find</code> where the "value"
+parameter is of type <code>const iterator_traits&lt;It&gt;::value_type&</code> instead of
+<code>const T&</code>. What are some disadvantages of this version? Advantages? Which would you
+expect to be faster for the use-case in that wandbox's <code>main</code> routine?
+</p>
+
+<p>
+5. (Optional) Measure and find out which version is faster, and how many elements you need
+in the vector in order for one to overtake the other. Which one makes more sense for the Standard
+Library to provide?
+</p>
+
+<p>
+You're done with this set of exercises! Sit back and relax, or optionally,
+read the following paper about algorithms.
+
+<ul>
+<li><a href="https://www.cs.hmc.edu/~oneill/papers/Sieve-JFP.pdf">"The Genuine Sieve of Eratosthenes." Melissa O'Neill, 2006.</a></li>
+</ul>
+
+</body>
+</html>
