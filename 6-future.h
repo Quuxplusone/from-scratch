@@ -69,7 +69,7 @@ public:
 
     promise(const promise&) = delete;
     promise(promise&&) noexcept = default;
-    promise& operator=(promise&&) noexcept = default;
+    promise& operator=(promise&& rhs) noexcept { promise(std::move(rhs)).swap(*this); }
     promise& operator=(const promise&) = delete;
 
     void swap(promise& rhs) { m_ptr.swap(rhs.m_ptr); }

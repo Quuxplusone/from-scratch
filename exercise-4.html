@@ -10,6 +10,7 @@
 This exercise is supposed to drive home the proper usage of a mutex&ndash;condition-variable pair
 to protect access to shared data.
 
+<h3>Exercise 4a. Find the concurrency bug!</h3>
 <p>
 Open <a href="https://wandbox.org/permlink/8lURJet879iGmrTF">this wandbox</a>
 (<a href="4.cc">backup</a>). You'll see an implementation of a "<code>ThreadSafeStack</code>"
@@ -32,7 +33,7 @@ find and fix the bug. (Your fix should actually make the code shorter and simple
 done, run the code again; it should no longer segfault, with or without the calls to
 <code>yield</code>.
 
-<h3>Exercise 4b. Running user code under a lock</h3>
+<h3>Exercise 4b (optional). Running user code under a lock</h3>
 <p>
 1. (Optional) This "<code>ThreadSafeStack&lt;T&gt;</code>" is somewhat dangerous, because
 lines 20, 30, and 31 all run user-supplied code under a mutex lock. Imagine, or write,

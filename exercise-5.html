@@ -1,0 +1,69 @@
+<html>
+<head>
+<title>Exercise 5</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 5. Smart pointers from scratch.</h2>
+
+<p>
+Open <a href="https://wandbox.org/permlink/F0TqIV7X6DnFGKjx">this wandbox</a>
+(<a href="5a-main.cc">b</a>, <a href="5a-shared-ptr.h">b</a>, <a href="5a-make-shared.h">b</a>,
+<a href="5a-smart-ptr-base.h">b</a>, <a href="5a-test-refcounting.cc">b</a>,
+<a href="5a-test-crtp.cc">b</a>). It contains an almost-complete implementation of
+<code>shared_ptr</code>.
+
+<h3>Exercise 5a. Atomic reference-counting</h3>
+<p>
+1. Find the definition of <code>increment_use_count</code>
+in "shared-ptr.h". Fill in the blanks according to the following algorithm:
+<ul>
+    <li>If <code>m_ctrl</code> is null, don't do anything.</li>
+    <li>Otherwise, atomically increment <code>m_ctrl->m_use_count</code>.</li>
+</ul>
+
+<p>
+2. Find the definition of <code>decrement_use_count</code>
+in "shared-ptr.h". Fill in the blanks according to the following algorithm:
+<ul>
+    <li>If <code>m_ctrl</code> is null, don't do anything.</li>
+    <li>Otherwise, atomically decrement <code>m_ctrl->m_use_count</code>.</li>
+    <li>If <code>m_use_count</code> just hit zero, then delete the controlled object.
+    (Don't just do <code>delete m_ptr</code>! You need to ask the control block
+    how to delete the original controlled object.)</li>
+    <li>If <code>m_use_count</code> just hit zero, then decrement <code>m_weak_count</code>
+    by 1.</li>
+    <li>If that makes <code>m_weak_count</code> hit zero, then free the control block
+    by calling <code>delete m_ctrl</code>.</li>
+</ul>
+Run the test cases in "test-refcounting.cc". They should pass.
+
+<p>
+3. Use the <code>-DY=std::this_thread_yield();</code> trick that we learned in Exercise 4
+to stress-test your <code>increment_use_count</code> and <code>decrement_use_count</code>
+code. Does it still work? (It should.) If <code>Y</code> exposes bugs in your code,
+try to fix them. Pay attention to "time-of-check-to-time-of-use" races: you must not
+allow any time to elapse between decrementing <code>m_use_count</code> and branching on
+its new value. (Use the return value of <code>operator--</code>!)
+
+
+<h3>Exercise 5b (optional). Metaprogramming <code>enable_shared_from_this</code></h3>
+
+<p>
+1. (Optional) Study the code in <a href="">this exercise's wandbox</a>. It includes
+an almost-complete implementation of <code>enable_shared_from_this</code>. Can you
+see how to connect <code>maybe_enable_sharing_from_this</code> to the definition of
+<code>enable_shared_from_this</code> from
+<a href="https://github.com/Quuxplusone/from-scratch/blob/master/include/scratch/bits/smart-ptrs/enable-shared-from-this.h">Arthur's from-scratch repo</a>?
+
+2. (Optional) Try to understand the SFINAE on <code>maybe_enable_shared_from_this</code>.
+The file "test-crtp.cc"
+(<a href="5a-test-crtp.cc">backup</a>) may be helpful to understand the corner cases.
+
+<hr>
+<p>
+You're done with this set of exercises! Sit back and relax, or optionally, study the
+code in this exercise's wandbox.
+
+</body>
+</html>

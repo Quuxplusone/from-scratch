@@ -7,7 +7,7 @@
 <h2>Exercise 6. Futures from scratch.</h2>
 
 <p>
-Open <a href="https://wandbox.org/permlink/k9QHDPkKNaQbitgG">this wandbox</a>
+Open <a href="https://wandbox.org/permlink/pyHBym0fJadAJq1m">this wandbox</a>
 (<a href="6-future.h">b</a>, <a href="6-shared-future.h">b</a>, <a href="6-test-unshared.h">b</a>,
 <a href="6-test-shared.h">b</a>). It contains an implementation of <code>std::promise&lt;T&gt;</code>
 and <code>std::future&lt;T&gt;</code> for object types (i.e., not references or void types).
@@ -32,7 +32,7 @@ What are the pros and cons of each approach? What does the standard library actu
 cppreference.)
 
 
-<h3>Exercise 6b. <code>~promise</code> from scratch</h3>
+<h3>Exercise 6b (optional). <code>~promise</code> from scratch</h3>
 <p>
 1. (Optional) There is code in <code>~promise()</code> to satisfy the standard's requirement that
 a future should never wait forever on a destroyed promise, but instead the future should become ready
@@ -41,7 +41,7 @@ However, the code in the wandbox is commented out, because it depends on the fun
 <code>promise::ready()</code>, which is not implemented. Uncomment this code and get it working.
 If you can get it working <i>without</i> implementing <code>ready()</code>, tell Arthur about it!
 
-<h3>Exercise 6c. Running user code under a lock</h3>
+<h3>Exercise 6c (optional). Running user code under a lock</h3>
 <p>
 Recall from Exercise 4b that running user-supplied code under a lock is not generally safe.
 
