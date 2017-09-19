@@ -9,6 +9,7 @@
 #include "scratch/bits/smart-ptrs/make-shared.h"
 #include "scratch/bits/stdexcept/future-error.h"
 #include "scratch/bits/stdexcept/make-exception-ptr.h"
+#include "scratch/bits/type-erasure/unique-function.h"
 
 #include <atomic>
 #include <exception>
@@ -24,6 +25,7 @@ class future_shared_state
     std::atomic<bool> m_ready{false};
     optional<T> m_value;
     std::exception_ptr m_exception;
+    unique_function<void()> m_then;
 public:
     bool ready() const { return m_ready; }
 
@@ -45,9 +47,30 @@ public:
     }
 
     void set_ready() {
-        lock_guard lk(m_mtx);
-        m_ready = true;
-        m_cv.notify_all();
+        unique_function<void()> continuation;
+        if (true) {
+            lock_guard lk(m_mtx);
+            m_ready = true;
+            m_then.swap(continuation);
+            m_cv.notify_all();
+        }
+        if (continuation) {
+            continuation();
+        }
+    }
+
+    void set_continuation(unique_function<void()> continuation) {
+        bool just_run_it = false;
+        if (true) {
+            lock_guard lk(m_mtx);
+            just_run_it = m_ready;
+            if (!just_run_it) {
+                m_then.swap(continuation);
+            }
+        }
+        if (just_run_it) {
+            continuation();
+        }
     }
 
     void wait() {
@@ -145,6 +168,53 @@ public:
         wait();
         auto sptr = std::move(m_ptr);
         return std::move(sptr->get_value_assuming_ready());
+    }
+
+    template<class F>
+    auto then(F func) {
+        if (!valid()) throw future_error(future_errc::no_state);
+        using R = decltype(func(std::move(*this)));
+        promise<R> p;
+        future<R> result = p.get_future();
+        unique_function<void()> continuation = [p = std::move(p), func = std::move(func), sptr = m_ptr]() mutable {
+            try {
+                future self(std::move(sptr));
+                p.set_value(func(std::move(self)));
+            } catch (...) {
+                p.set_exception(std::current_exception());
+            }
+        };
+        auto sptr = std::move(m_ptr);
+        sptr->set_continuation(std::move(continuation));
+        return result;
+    }
+
+    template<class F>
+    auto next(F func) {
+        return this->then([func = std::move(func)](auto self) {
+            return func(self.get());
+        });
+    }
+
+    template<class F>
+    future recover(F func) {
+        return this->then([func = std::move(func)](auto self) {
+            try {
+                return self.get();
+            } catch (...) {
+                return func(std::current_exception());
+            }
+        });
+    }
+
+    future fallback_to(T value) {
+        return this->then([value = std::move(value)](auto self) {
+            try {
+                return self.get();
+            } catch (...) {
+                return value;
+            }
+        });
     }
 };
 
