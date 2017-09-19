@@ -1,0 +1,123 @@
+<html>
+<head>
+<title>Exercise 8</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 8. Small Buffer Optimization in std::unique_function.</h2>
+
+<h3>Exercise 8a. Manual vtable-in-data.</h3>
+<p>
+Open <a href="https://wandbox.org/permlink/ryjnkP72SvD5TMOz">this wandbox</a>
+(<a href="8a-main.cc">backup</a>, <a href="8a-unique-function.h">backup</a>).
+The file "unique-function.h" contains a complete implementation of
+<code>unique_function&lt;R(A...)&gt;</code>.
+
+<p>
+1. Read through the code. (It's only 128 lines! It should take about 10 minutes.)
+Here are some questions to guide your study:
+<ul>
+<li>What is <code>sizeof(ContainerVtable&lt;R(A...)&gt;)</code>? Does it depend on
+the types involved in <code>R(A...)</code>? (24 bytes. No.)</li>
+<li>Why does <code>move_to</code> end with a call to <code>self.reset()</code>? (To preserve
+an ownership invariant.)</li>
+<li>What is <code>sizeof(unique_function&lt;R(A...)&gt;)</code>? Does it depend on
+the types involved in <code>R(A...)</code>? (8 + SIZE bytes. No.)</li>
+<li>What is going on in <code>unique_function::swap</code>? Could we conceivably
+do "better"? (Consider what happens when we <code>swap</code> two unique_function objects
+where one object's <code>HeldType</code> is <code>unique_ptr&lt;BigWidget&gt;</code> and
+the other's is <code>unique_ptr&lt;BigGadget&gt;</code>. Does <code>swap</code> cause any
+calls to either <code>~BigWidget</code> or <code>~BigGadget</code>?)</li>
+</ul>
+
+<p>
+2. (Optional) Implement the "type-unerasure" primitive
+<pre>
+    const std::type_info&amp; unique_function::type() const
+</pre>
+by adding a new entry to <code>ContainerVtable</code>. It should take you 9 lines,
+or maybe 10 depending on your preferred brace style.
+
+<hr>
+You're done with the first part of this set of exercises! Sit back and relax for a moment.
+We'll show a couple more slides before the next exercise. (But it's okay to read ahead.)
+
+
+<h3>Exercise 8b. Manual vtable-in-code.</h3>
+
+<p>
+Open <a href="https://wandbox.org/permlink/IPU14JB7sYaYuSbA">this wandbox</a>
+(<a href="8b-main.cc">b</a>, <a href="8b-unique-function.h">b</a>, <a href="8b-old-unique-function.h">b</a>).
+The file "unique-function.h" contains a complete implementation of
+<code>unique_function&lt;R(A...)&gt;</code>. The file "old-unique-function.h"
+is just a copy of the version from Exercise 8a, so that you have it handy for
+comparison.
+
+<p>
+1. Read through the code. How does it differ from the code in Exercise 8a?
+<ul>
+<li>The function <code>vtable_in_code</code> is new; it replaces the old code's
+array-of-function-pointers <code>vtable</code>. Its parameter list is basically
+the union of all the parameter lists of the old vtable methods... except for
+the old method <code>R call(A...)</code>. Could <code>vtable_in_code</code>
+take <code>A...</code> and return something like <code>optional&lt;R&gt;</code>?
+(Not really. Consider what happens if <code>A...</code> are reference types,
+for example.)
+</li>
+<li>
+The switch cases for <code>MOVE_TO</code> and <code>DESTROY</code> do not return
+function pointers, but you could imagine that they once did, before we applied some
+optimization. By <i>not</i> returning function pointers, and just doing the work
+directly inside <code>vtable_in_code</code>, we are basically inlining one function call.
+</li>
+<li>
+Function pointers
+can be losslessly cast from one type to another and back, so we could return
+<code>void(*)()</code> instead of <code>TrampolineType*</code> if we wanted, and
+just <code>reinterpret_cast</code> it back in the caller.
+</li>
+<li>
+We can write <code>vtable_in_code</code> mechanically, by always returning
+function pointers (cast to <code>void(*)()</code> and cast back in our caller),
+and then mechanically "inlining" any functions whose signatures involve only
+POD or pointer types.
+</li>
+</ul>
+
+<p>
+2. (Optional) Implement the "type-unerasure" primitive
+<pre>
+    const std::type_info&amp; unique_function::type() const
+</pre>
+by adding a new entry to <code>ContainerVtableImpl</code>. It should take you about 8 lines.
+You'll have to add a new enumerator to <code>VtableIndex</code>. You can either return a
+function pointer using the casting trick above, or you can add a new POD parameter to
+<code>vtable_in_code</code>.
+<pre>
+    static auto vtable_in_code(UF& self, VtableIndex vtable_index, UF *dest, <b>const std::type_info **outp</b>)
+        -> typename UF::TrampolineType*
+</pre>
+
+<p>
+3. (Optional) Implement <code>unique_function::type()</code> by giving <code>unique_function</code>
+a non-static data member of type <code>const std::type_info *</code>. Was that easier?
+What are the pros and cons of this approach?
+
+<p>
+Consider the "don't pay for what you don't use"
+philosophy of C++. Should people be "using" the <code>type()</code> method? Why or why not?
+
+<hr>
+<p>
+You're done with this set of exercises! Sit back and relax, or optionally,
+browse this collection of computer-related Usenet posts.
+
+<ul>
+<li><a href="http://yarchive.net/comp/index.html">"Computer." Posts collected by Norman Yarvin.</a></li>
+</ul>
+
+<ul>
+</ul>
+
+</body>
+</html>
