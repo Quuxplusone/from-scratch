@@ -271,6 +271,28 @@ public:
         }
     }
 
+    int compare(const T *rhs, size_type rhslen) const noexcept {
+        size_type cmplen = (size() < rhslen ? size() : rhslen);
+        auto cmp = Traits::compare(data(), rhs, cmplen);
+        if (cmp != 0) return cmp;
+        return (size() < rhslen) ? -1 : (size() > rhslen);
+    }
+    int compare(const basic_string& rhs) const noexcept { return compare(rhs.data(), rhs.size()); }
+    int compare(const T *rhs) const noexcept { return compare(rhs, Traits::length(rhs)); }
+
+    bool operator==(const basic_string& rhs) const noexcept { return size() == rhs.size() && compare(rhs) == 0; }
+    bool operator!=(const basic_string& rhs) const noexcept { return size() != rhs.size() || compare(rhs) != 0; }
+    bool operator< (const basic_string& rhs) const noexcept { return compare(rhs) <  0; }
+    bool operator<=(const basic_string& rhs) const noexcept { return compare(rhs) <= 0; }
+    bool operator> (const basic_string& rhs) const noexcept { return compare(rhs) >  0; }
+    bool operator>=(const basic_string& rhs) const noexcept { return compare(rhs) >= 0; }
+    bool operator==(const T *rhs) const noexcept { return compare(rhs) == 0; }
+    bool operator!=(const T *rhs) const noexcept { return compare(rhs) != 0; }
+    bool operator< (const T *rhs) const noexcept { return compare(rhs) <  0; }
+    bool operator<=(const T *rhs) const noexcept { return compare(rhs) <= 0; }
+    bool operator> (const T *rhs) const noexcept { return compare(rhs) >  0; }
+    bool operator>=(const T *rhs) const noexcept { return compare(rhs) >= 0; }
+
     constexpr T& at(size_t i) {
         if (i >= size()) throw out_of_range(exception::nocopy, "at");
         return data()[i];
