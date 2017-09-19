@@ -1,0 +1,74 @@
+<html>
+<head>
+<title>Exercise 7</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 7. std::future from scratch, part 2.</h2>
+
+
+<h3>Exercise 7a. Implement .set_ready() and .set_continuation().</h3>
+
+<p>
+Open <a href="https://wandbox.org/permlink/o80QsJfWSlWoLEDB">this wandbox</a>
+(<a href="7a-main.cc">b</a>, <a href="7a-future.h">b</a>, <a href="7a-test-then.cc">b</a>,
+<a href="7a-unique-function.h">b</a>).
+It contains an almost-complete implementation of <code>my::future&lt;T&gt;</code>
+for object types (i.e. not void or reference types).
+
+<p>
+Your task is to implement <code>future_shared_state::set_ready()</code> and
+<code>future_shared_state::set_continuation()</code>.
+</p>
+
+<code>set_ready</code> needs to do the following things:
+<ul>
+    <li>Make <code>m_ready=true</code>.</li>
+    <li>Call <code>m_cv.notify_all()</code> to wake up the waiting future (if any).</li>
+    <li>Call <code>m_then()</code>, if it is non-empty.</li>
+</ul>
+
+<code>set_continuation</code> needs to do the following things:
+<ul>
+    <li>If the shared state is already in the "ready" state, just run <code>continuation()</code> and return.</li>
+    <li>Otherwise, set <code>m_then = continuation</code>.</li>
+</ul>
+Remember that <code>set_continuation</code> is called from <code>future::then</code>,
+and <code>set_ready</code> is called from <code>promise::set_value</code>.
+So, to avoid a race between <code>set_continuation</code>'s read and <code>set_ready</code>'s write,
+both functions must deal with <code>m_ready</code> under a mutex lock. (You should use
+<code>m_mtx</code> for this purpose.)
+
+<h3>Exercise 7b (optional). Now do it without data races.</h3>
+
+<p>
+Use our <code>-DY=std::this_thread::yield();</code> trick to test your implementations.
+Do they really work?
+
+
+<h3>Exercise 7c (optional). Now do it without running user code under a lock.</h3>
+
+<p>
+If your solution involves running <code>m_then()</code> while still holding the mutex lock,
+that's probably a problem.
+
+<p>
+Consider that even running something as trivial-looking as
+<code>m_then = std::move(continuation);</code> will call the move-constructor of
+<code>unique_function&lt;void()&gt;</code>, which could call the move-constructor of
+any <code>T</code> that has been captured inside the <code>unique_function</code>.
+Is this a problem? How could we solve it? (This is an open question, as far as I know.)
+
+
+<hr>
+<p>
+You're done with the seventh set of exercises! Sit back and relax, or optionally,
+browse the following links.
+
+<ul>
+<li><a href="https://bugs.llvm.org/show_bug.cgi?id=24692">PR24692. "promise/future deadlock." Agustín Bergé, 2015.</a></li>
+<li><a href="https://www.youtube.com/watch?v=yOtb508xQuM">"completion&lt;T&gt;: Improving the future&lt;T&gt; with monads."</a> Travis Gockel, CppCon 2015. (This is a video. Maybe watch it later.)</li>
+</ul>
+
+</body>
+</html>
