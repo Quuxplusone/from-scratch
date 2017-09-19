@@ -32,6 +32,13 @@ struct string_related_char_traits<char>
             --count;
         }
     }
+    static int compare(const char *a, const char *b, size_t count) {
+        while (count) {
+            if (*a != *b) return (*a < *b) ? -1 : 1;
+            --count;
+        }
+        return 0;
+    }
 };
 
 template<>
