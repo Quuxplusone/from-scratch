@@ -1,0 +1,48 @@
+<html>
+<head>
+<title>Exercise 10</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 10a. tuple_cat.</h2>
+
+<p>
+In this exercise, you'll implement <code>std::tuple_cat</code> (almost) from scratch.
+I first saw the high-level "get-of-get" strategy in this implementation coming from Stephan T. Lavavej.
+Thanks to Michael Park for pointing out that the same get-of-get strategy suffices to
+compute <code>ResultType</code> as well.
+
+
+<h3>Exercise 10a. Implement <code>tuple_cat</code></h3>
+<p>
+Open <a href="https://wandbox.org/permlink/w4b8cXQq58sIIbvw">this wandbox</a>
+(<a href="10a-main.cc">b</a>, <a href="10a-tuple-cat.h">b</a>, <a href="10a-in
+dex-of-tuple.h">b</a>,
+<a href="10a-index-into-tuple.h">b</a>).
+You'll see an almost-complete implementation of <code>my::tuple_cat</code>.
+
+<p>
+1. Fill in the bodies of the functions in "index-of-tuple.h" and "index-into-tuple.h" so that
+the test cases in those files pass.
+
+<p>
+You might want to copy each of the two ".h" files into a new wandbox, temporarily,
+so you don't have to see irrelevant compiler errors from <code>tuple_cat</code> and
+<code>main</code> while you work.
+
+<p>
+2. Run the test cases in <code>main()</code>. Do they pass?
+
+
+<hr>
+<p>
+You're done with this exercise! Sit back and relax, or optionally,
+browse the following blog posts.
+
+<ul>
+<li><a href="https://nikic.github.io/2014/12/22/PHPs-new-hashtable-implementation.html">"PHP's new hashtable implementation." Nikita Popov, 2014.</a></li>
+<li><a href="https://reviews.llvm.org/D27565">"Fix __compressed_pair so it doesn't copy the argument multiple times, and add constexpr." Eric Fiselier, 2016.</a></li>
+</ul>
+
+</body>
+</html>
