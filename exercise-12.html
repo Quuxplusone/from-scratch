@@ -1,0 +1,90 @@
+<html>
+<head>
+<title>Exercise 12</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h2>Exercise 12. Hashing.</h2>
+
+<p>
+This exercise is supposed to demonstrate the proper way to write hash functions for your own
+user-defined types.
+
+<h3>Exercise 12a. Hashing <code>const char*</code>.</h3>
+<p>
+Open <a href="https://wandbox.org/permlink/BrQWHXEpZW6FMIzY">this wandbox</a>
+(<a href="12a-main.cc">b</a>, <a href="12a-CStringHash.h">b</a>).
+It contains some code that attempts to use <code>std::unordered_map&lt;const char*, int&gt;</code>
+but which doesn't currently work &mdash; because the default <code>std::hash&lt;const char *&gt;</code>
+hashes the <i>pointer values</i> instead of the <i>pointed-to strings</i>. (It doesn't even assume
+that the pointers point to C-style null-terminated strings. Which makes sense, in general.)
+
+<p>
+1. Open "CStringHash.h" and implement the one-argument <code>operator()(const char *)</code>.
+You can write your own hash function, or you can delegate all the hard work to
+<code>std::hash&lt;std::string_view&gt;</code>.
+
+<p>
+If you delegate to <code>std::hash</code>, remember that the syntax is
+<code>std::hash&lt;std::string_view&gt;{}(s)</code>. You are default-constructing an
+<i>instance</i> of type <code>std::hash&lt;std::string_view&gt;</code> and then invoking
+its <code>operator()</code> with one argument; you are <b>not</b> calling a <i>function</i> named
+<code>std::hash</code> with one argument.
+
+<p>
+2. Run the code. Even if you have implemented your hash function correctly, you will see that
+the map still has 4 key-value pairs, not 2! Recall that <code>std::unordered_map</code> takes
+five template parameters:
+
+<pre>
+    unordered_map&lt;KeyType, ValueType, Hash, KeyEqual, Allocator&gt;
+</pre>
+
+The fourth template parameter defaults to <code>std::equal_to&lt;KeyType&gt;</code>.
+You have implemented a correct <code>Hash</code> operation, so that <code>hello1</code>
+and <code>hello2</code> hash into the same hash bucket. However, because of
+the default <code>equal_to</code> comparator, these two pointer values still ultimately
+<i>compare</i> unequal and result in two separate entries within the same bucket.
+
+<p>
+3. Change the comparator parameter in the declaration of <code>m</code> away from the default,
+so that <code>hello1</code> and <code>hello2</code> will not only hash into the same bucket,
+but also compare equal. Now you should see the expected output from <code>main()</code>!
+
+
+<h3>Exercise 12b (optional). Transparent comparators</h3>
+<p>
+1. (Optional) Open <a href="https://wandbox.org/permlink/0qoNiseJaPLlEjoN">this wandbox</a>
+(<a href="12b-main.cc">b</a>, <a href="12b-Person.h">b</a>, <a href="12b-PersonLessThan.h">b</a>).
+The last line of <code>main()</code> is attempting to use <code>std::set::count()</code> with
+an argument of a type that is not convertible to <code>my::Person</code>.
+
+<p>
+Implement the missing parts of the comparator object <code>PersonLessThan</code>, so that
+<code>main()</code> compiles and runs as expected. You do not need to modify
+<code>struct Person</code> at all.
+
+<p>
+2. (Optional) Can you implement similar heterogeneous-<code>count()</code>
+behavior for an <i>unordered_</i>set of <code>Person</code>? Why or why not? (Check the
+cppreference entry for <code>unordered_set::count()</code>.)
+
+<p>
+3. If you were to implement your own hash-table class template, <code>my::unordered_set</code>,
+could <i>you</i> implement support for heterogeneous comparators? Would you require that
+<code>Hash::is_transparent</code>, <code>KeyEqual::is_transparent</code>, both, or neither?
+Would you allow <code>Hash</code> and <code>KeyEqual</code> to be different types in the first
+place? Why or why not?
+
+<hr>
+<p>
+You're done with this set of exercises! Sit back and relax, or optionally,
+browse the following blog posts.
+
+<ul>
+<li><a href="http://burtleburtle.net/bob/rand/talksmall.html">"The testing and design of small state noncryptographic pseudorandom number generators." Bob Jenkins, 20(??).</a></li>
+<li><a href="https://swtch.com/~rsc/regexp/regexp1.html">"Regeular expression matching can be simple and fast." Russ Cox, 2007.</a></li>
+</ul>
+
+</body>
+</html>
