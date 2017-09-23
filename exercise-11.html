@@ -1,17 +1,18 @@
 <html>
 <head>
-<title>Exercise 9</title>
+<title>Exercise 11</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<h2>Exercise 9. Algorithms from scratch.</h2>
+<h2>Exercise 11. Algorithms from scratch.</h2>
 
 <p>
 Open <a href="https://wandbox.org/permlink/T9f85csezkvoPXnD">this wandbox</a>
-(<a href="9a-main.cc">backup</a>). You'll see an implementation of std::find.
+(<a href="11a-main.cc">b</a>, <a href="11a-find.h">b</a>, <a href="11a-count.h">b</a>).
+You'll see an implementation of <code>std::find</code> and <code>std::find_if</code>.
 
 <p>
-1. Fill in the blanks to implement <code>std::count</code> and <code>std::count_if</code>.
+1. Fill in the blanks in "count.h" to implement <code>std::count</code> and <code>std::count_if</code>.
 Run the test cases; they should pass.
 
 <p>
@@ -48,7 +49,7 @@ Both compilers are good enough to suggest the correct fix: to insert the keyword
 
 <p>
 4. Look at <a href="https://wandbox.org/permlink/QY20901svSD5vYO8">this wandbox</a>
-(<a href="9b.cc">backup</a>). It has a version of <code>find</code> where the "value"
+(<a href="11b.cc">backup</a>). It has a version of <code>find</code> where the "value"
 parameter is of type <code>const iterator_traits&lt;It&gt;::value_type&</code> instead of
 <code>const T&</code>. What are some disadvantages of this version? Advantages? Which would you
 expect to be faster for the use-case in that wandbox's <code>main</code> routine?
@@ -62,10 +63,11 @@ Library to provide?
 
 <p>
 You're done with this set of exercises! Sit back and relax, or optionally,
-read the following paper about algorithms.
+read the following paper and StackOverflow question.
 
 <ul>
 <li><a href="https://www.cs.hmc.edu/~oneill/papers/Sieve-JFP.pdf">"The Genuine Sieve of Eratosthenes." Melissa O'Neill, 2006.</a></li>
+<li><a href="https://stackoverflow.com/questions/43470741/how-does-eric-nieblers-implementation-of-stdis-function-work">"How does Eric Niebler's implementation of std::is_function work?" StackOverflow community wiki, 2017.</a>
 </ul>
 
 </body>
