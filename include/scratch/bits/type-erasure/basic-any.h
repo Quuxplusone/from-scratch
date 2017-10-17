@@ -42,6 +42,59 @@ struct basic_any_destructible<Derived, Alloc, enable_if_t<is_inplace_allocator_v
     ~basic_any_destructible() = default;
 };
 
+template<class Any>
+struct basic_any_wrapper_base {
+    constexpr virtual void move_into(Any *other) = 0;
+    constexpr virtual void copy_into(Any *other) const = 0;
+};
+
+template<class Any, class T>
+struct basic_any_wrapper : public basic_any_wrapper_base<Any> {
+    T m_data;
+
+    template<class... Args>
+    constexpr explicit basic_any_wrapper(Args&&... args) : m_data(std::forward<Args>(args)...) {}
+
+    constexpr void move_into(Any *other) override {
+        other->template emplace<T>(std::move(m_data));
+    }
+
+    constexpr void copy_into(Any *other) const override {
+        other->template emplace<T>(m_data);
+    }
+
+    static constexpr const void *t_behaviors(basic_any_behavior behavior, const Any *self, Any *other) {
+        switch (behavior) {
+            case basic_any_behavior::TYPE: return &typeid(T);
+            case basic_any_behavior::DATA: return self->template m_data<T>();
+            case basic_any_behavior::COPY_TO: {
+                other->reset();
+                self->m_outofline->copy_into(other);
+                return nullptr;
+            }
+            case basic_any_behavior::MOVE_TO: {
+                Any *nonconst_self = const_cast<Any*>(self);
+                other->reset();
+                nonconst_self->m_outofline->move_into(other);
+                nonconst_self->reset();
+                return nullptr;
+            }
+            case basic_any_behavior::DESTROY: {
+                Any *nonconst_self = const_cast<Any*>(self);
+                using AllocT = typename Any::Alloc_traits::template rebind_alloc<T>;
+                AllocT alloc(self->get_allocator());
+                auto p = nonconst_self->template m_data<T>();
+                allocator_traits<AllocT>::destroy(alloc, &*p);
+                if constexpr (Any::has_deallocate && !Any::template fits_inline_v<T>) {
+                    allocator_traits<AllocT>::deallocate(alloc, p, 1);
+                }
+                return nullptr;
+            }
+        }
+        return nullptr;  // unreachable
+    }
+};
+
 } // namespace scratch::detail
 
 namespace scratch {
@@ -50,6 +103,9 @@ template<size_t Size, size_t Align = alignof(max_align_t), class Alloc = allocat
 class basic_any : private detail::basic_any_destructible<basic_any<Size, Align, Alloc>, Alloc> {
     using base = detail::basic_any_destructible<basic_any<Size, Align, Alloc>, Alloc>;
     friend base;
+
+    template<class Any, class T> friend struct detail::basic_any_wrapper;
+
     using allocator_type = typename allocator_traits<Alloc>::template rebind_alloc<void>;
     static constexpr bool has_allocate = !is_inplace_allocator_v<allocator_type>;
     static constexpr bool has_deallocate = !is_inplace_allocator_v<allocator_type> && !is_constexpr_allocator_v<allocator_type>;
@@ -61,7 +117,7 @@ class basic_any : private detail::basic_any_destructible<basic_any<Size, Align, 
     static_assert(is_trivially_copyable_v<typename Alloc_traits::void_pointer>);
 
     union {
-        alloc_pointer_t<void> m_outofline {};
+        alloc_pointer_t<detail::basic_any_wrapper_base<basic_any>> m_outofline {};
         alignas(Align ? Align : 1) char m_inline[Size ? Size : 1];
     };
     allocator_type m_alloc;
@@ -74,7 +130,8 @@ class basic_any : private detail::basic_any_destructible<basic_any<Size, Align, 
         } else if constexpr (fits_inline_v<T>) {
             return static_cast<alloc_pointer_t<T>>((T*)m_inline);
         } else {
-            return static_cast<alloc_pointer_t<T>>(m_outofline);
+            using Wrapper = detail::basic_any_wrapper<basic_any, T>;
+            return static_cast<alloc_pointer_t<T>>(&static_cast<alloc_pointer_t<Wrapper>>(m_outofline)->m_data);
         }
     }
 
@@ -85,7 +142,8 @@ class basic_any : private detail::basic_any_destructible<basic_any<Size, Align, 
         } else if constexpr (fits_inline_v<T>) {
             return static_cast<alloc_pointer_t<const T>>((const T*)m_inline);
         } else {
-            return static_cast<alloc_pointer_t<const T>>(m_outofline);
+            using Wrapper = detail::basic_any_wrapper<basic_any, T>;
+            return static_cast<alloc_pointer_t<const T>>(&static_cast<alloc_pointer_t<Wrapper>>(m_outofline)->m_data);
         }
     }
 
@@ -108,37 +166,6 @@ class basic_any : private detail::basic_any_destructible<basic_any<Size, Align, 
         return nullptr;  // unreachable
     }
 
-    template<class T>
-    static constexpr const void *t_behaviors(detail::basic_any_behavior behavior, const basic_any *self, basic_any *other) {
-        switch (behavior) {
-            case detail::basic_any_behavior::TYPE: return &typeid(T);
-            case detail::basic_any_behavior::DATA: return self->m_data<T>();
-            case detail::basic_any_behavior::COPY_TO: {
-                other->reset();
-                other->emplace<T>(*self->m_data<T>());
-                return nullptr;
-            }
-            case detail::basic_any_behavior::MOVE_TO: {
-                basic_any *nonconst_self = const_cast<basic_any*>(self);
-                other->reset();
-                other->emplace<T>(std::move(*nonconst_self->m_data<T>()));
-                nonconst_self->reset();
-                return nullptr;
-            }
-            case detail::basic_any_behavior::DESTROY: {
-                auto *nonconst_self = const_cast<basic_any*>(self);
-                using AllocT = typename Alloc_traits::template rebind_alloc<T>;
-                AllocT alloc(self->get_allocator());
-                auto p = nonconst_self->template m_data<T>();
-                allocator_traits<AllocT>::destroy(alloc, &*p);
-                if constexpr (has_deallocate && !fits_inline_v<T>) {
-                    allocator_traits<AllocT>::deallocate(alloc, p, 1);
-                }
-                return nullptr;
-            }
-        }
-        return nullptr;  // unreachable
-    }
 public:
     constexpr basic_any() noexcept : m_behaviors(default_behaviors) {}
     constexpr basic_any(const basic_any& rhs) : basic_any() {
@@ -197,14 +224,15 @@ public:
 private:
     template<class T, class... Args>
     inline void allocate_and_construct(Args&&... args) {
-        using AllocT = typename Alloc_traits::template rebind_alloc<T>;
-        AllocT alloc(get_allocator());
-        auto fancy_ptr = allocator_traits<AllocT>::allocate(alloc, 1);
-        T *raw_ptr = &*fancy_ptr;
+        using Wrapper = detail::basic_any_wrapper<basic_any, T>;
+        using AllocWrapper = typename Alloc_traits::template rebind_alloc<Wrapper>;
+        AllocWrapper alloc(get_allocator());
+        auto fancy_ptr = allocator_traits<AllocWrapper>::allocate(alloc, 1);
+        Wrapper *raw_ptr = &*fancy_ptr;
         try {
-            allocator_traits<AllocT>::construct(alloc, raw_ptr, std::forward<Args>(args)...);
+            allocator_traits<AllocWrapper>::construct(alloc, raw_ptr, std::forward<Args>(args)...);
         } catch (...) {
-            allocator_traits<AllocT>::deallocate(alloc, fancy_ptr, 1);
+            allocator_traits<AllocWrapper>::deallocate(alloc, fancy_ptr, 1);
             throw;
         }
         m_outofline = std::move(fancy_ptr);
@@ -218,16 +246,17 @@ public:
             T *raw_ptr = &*m_data<T>();
             ::new ((void*)raw_ptr) T(std::forward<Args>(args)...);
         } else if constexpr (!has_deallocate) {
-            using AllocT = typename Alloc_traits::template rebind_alloc<T>;
-            AllocT alloc(get_allocator());
-            auto fancy_ptr = allocator_traits<AllocT>::allocate(alloc, 1);
-            T *raw_ptr = &*fancy_ptr;
-            allocator_traits<AllocT>::construct(alloc, raw_ptr, std::forward<Args>(args)...);
+            using Wrapper = detail::basic_any_wrapper<basic_any, T>;
+            using AllocWrapper = typename Alloc_traits::template rebind_alloc<Wrapper>;
+            AllocWrapper alloc(get_allocator());
+            auto fancy_ptr = allocator_traits<AllocWrapper>::allocate(alloc, 1);
+            Wrapper *raw_ptr = &*fancy_ptr;
+            allocator_traits<AllocWrapper>::construct(alloc, raw_ptr, std::forward<Args>(args)...);
             m_outofline = std::move(fancy_ptr);
         } else {
             allocate_and_construct<T>(std::forward<Args>(args)...);
         }
-        m_behaviors = t_behaviors<T>;
+        m_behaviors = detail::basic_any_wrapper<basic_any, T>::t_behaviors;
         return *m_data<T>();
     }
 
