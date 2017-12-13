@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include "is-relocatable.h"
+#include "is-trivially-comparable.h"
 #include "polyfill.h"
 
 namespace scratch {
@@ -240,5 +242,32 @@ template<class T, class A>
 void swap(vector<T, A>& lhs, vector<T, A>& rhs) noexcept {
     lhs.swap(rhs);
 }
+
+template<class T, class A>
+constexpr bool operator==(const vector<T, A>& lhs, const vector<T, A>& rhs) {
+    if (lhs.size() != rhs.size()) return false;
+    if (is_trivially_equality_comparable<T>::value) {
+        return memcmp(lhs.data(), rhs.data(), lhs.size() * sizeof(T)) == 0;
+    } else {
+        return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    }
+}
+
+template<class T, class A>
+constexpr bool operator<(const vector<T, A>& lhs, const vector<T, A>& rhs) {
+    if (is_trivially_less_than_comparable<T>::value) {
+        auto n = std::min(lhs.size(), rhs.size());
+        int result = memcmp(lhs.data(), rhs.data(), n * sizeof(T));
+        if (result != 0) return (result < 0);
+        return lhs.size() < rhs.size();
+    } else {
+        return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    }
+}
+
+template<class T, class A> constexpr bool operator!=(const vector<T, A>& lhs, const vector<T, A>& rhs) { return !(lhs == rhs); }
+template<class T, class A> constexpr bool operator<=(const vector<T, A>& lhs, const vector<T, A>& rhs) { return !(rhs < lhs); }
+template<class T, class A> constexpr bool operator>=(const vector<T, A>& lhs, const vector<T, A>& rhs) { return !(lhs < rhs); }
+template<class T, class A> constexpr bool operator>(const vector<T, A>& lhs, const vector<T, A>& rhs) { return (rhs < lhs); }
 
 } // namespace scratch
