@@ -8,6 +8,7 @@
 #include "tombstone-traits.h"
 #include "optional.h"
 #include "robin-hood-set.h"
+#include "ska-flathash.h"
 
 #if ALSO_TEST_BOOST
  #include "boost/version.hpp"
@@ -133,6 +134,30 @@ void test_robinhood(benchmark::State& state)
     }
 }
 
+template<class T>
+void test_ska_flathash(benchmark::State& state)
+{
+    int M = state.range(0);
+    ska::flat_hash_set<T> s;
+    while (state.KeepRunning()) {
+        s.clear();
+        int erased_count = 0;
+        int found_count = 0;
+        for (int i=0; i < M/2; ++i) {
+            s.insert(random_element<T>());
+        }
+        for (int i=0; i < M/2; ++i) {
+            erased_count += s.erase(random_element<T>());
+        }
+        for (int i=0; i < M/2; ++i) {
+            auto it = s.find(random_element<T>());
+            found_count += (it != s.end());
+        }
+        benchmark::DoNotOptimize(erased_count);
+        benchmark::DoNotOptimize(found_count);
+    }
+}
+
 static int print = []() {
 #define PRINT_SIZE(...) \
     printf("sizeof " #__VA_ARGS__ " = %zu\n", sizeof(__VA_ARGS__))
@@ -174,6 +199,12 @@ void scratch_tombstone2(benchmark::State& state)
     test_robinhood<scratch::optional, Tombstoneable<2>>(state);
 }
 
+void ska_flathash(benchmark::State& state)
+{
+    test_ska_flathash<Tombstoneable<2>>(state);
+}
+
+BENCHMARK(ska_flathash)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
 BENCHMARK(std_optional)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
 #if ALSO_TEST_BOOST
 BENCHMARK(boost_optional)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
