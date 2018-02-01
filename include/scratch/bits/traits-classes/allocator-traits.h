@@ -53,6 +53,8 @@ template<class Alloc> auto allocator_pocs(priority_tag<0>) -> false_type;
 template<class Alloc> auto allocator_iae(priority_tag<1>) -> typename Alloc::is_always_equal;
 template<class Alloc> auto allocator_iae(priority_tag<0>) -> typename is_empty<Alloc>::type;
 
+template<class U, class Alloc, class = enable_if_t<is_same_v<U, typename Alloc::value_type>>>
+auto allocator_rebind(Alloc&, priority_tag<2>) -> Alloc;
 template<class U, class Alloc>
 auto allocator_rebind(Alloc&, priority_tag<1>) -> typename Alloc::template rebind<U>::other;
 template<class U, template<class...> class SomeAllocator, class T, class... Vs>
@@ -85,7 +87,7 @@ struct allocator_traits {
     static constexpr bool propagate_on_container_swap_v = propagate_on_container_swap{};
     static constexpr bool is_always_equal_v = is_always_equal{};
 
-    template<class U> using rebind_alloc = decltype(detail::allocator_rebind<U>(declval<Alloc&>(), priority_tag<1>{}));
+    template<class U> using rebind_alloc = decltype(detail::allocator_rebind<U>(declval<Alloc&>(), priority_tag<2>{}));
     template<class U> using rebind_traits = allocator_traits<rebind_alloc<U>>;
 
 private:
