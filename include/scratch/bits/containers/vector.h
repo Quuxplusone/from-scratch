@@ -17,10 +17,10 @@ namespace scratch {
 
 template<class T, class Alloc = allocator<T>>
 class vector {
-    using Alloc_traits = allocator_traits<Alloc>;
+    using Alloc_traits = typename allocator_traits<Alloc>::template rebind_traits<T>;
 public:
     using value_type = T;
-    using allocator_type = Alloc;
+    using allocator_type = typename Alloc_traits::allocator_type;
     using size_type = typename Alloc_traits::size_type;
     using difference_type = typename Alloc_traits::difference_type;
     using reference = T&;
