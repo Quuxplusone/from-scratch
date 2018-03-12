@@ -50,12 +50,23 @@ def list_all_files_included_by(fname, options):
     try:
         with open(fname, 'r') as f:
             for line in f.readlines():
-                m = re.match(r'\s*#\s*include\s+"(.*)"', line)
+                m = re.match(r'\s*#\s*include\s+"([^"]*)"', line)
                 if m is not None:
-                    local_headers.append(locate_header_file(m.group(1), local_include_paths))
-                m = re.match(r'\s*#\s*include\s+<(.*)>', line)
+                    try:
+                        local_headers.append(locate_header_file(m.group(1), local_include_paths))
+                    except RuntimeError:
+                        if not options.ignore_file_not_found:
+                            raise
+                m = re.match(r'\s*#\s*include\s+<([^>]*)>', line)
                 if m is not None:
-                    std_headers.append(m.group(1))
+                    if options.treat_std_headers_as_local:
+                        try:
+                            local_headers.append(locate_header_file(m.group(1), local_include_paths))
+                        except RuntimeError:
+                            if not options.ignore_file_not_found:
+                                raise
+                    else:
+                        std_headers.append(m.group(1))
                 std_identifiers += re.findall(r'std::\w+', line)
                 std_identifiers += re.findall(r'::new', line)
                 std_identifiers += re.findall(r'::operator new', line)
@@ -101,11 +112,14 @@ def get_graphviz(inclusions, options):
             return ' [style=dashed]'
         return ''
 
-    def transitively_includes(h1, h2):
+    def transitively_includes(h1, h2, visited=None):
+        if visited is None:
+            visited = set()
+        visited.add(h1)
         if h1 == h2:
             return True
         next_headers, _, _ = inclusions[h1]
-        return any(transitively_includes(i, h2) for i in next_headers)
+        return any(transitively_includes(i, h2, visited) for i in next_headers if i not in visited)
 
     result = ''
     result += 'strict digraph {\n'
@@ -130,6 +144,8 @@ if __name__ == '__main__':
     parser.add_argument('-I', '--include-dir', action='append', default=['.'], metavar='DIR', help='Path(s) to search for local includes')
     parser.add_argument('--dot', action='store_true', help='Generate a .dot file for GraphViz')
     parser.add_argument('--show-transitive-edges', action='store_true', help='Show edges to headers that are transitively included anyway')
+    parser.add_argument('--treat-std-headers-as-local', action='store_true', help='Recurse into <x.h> as well as "x.h"')
+    parser.add_argument('--ignore-file-not-found', action='store_true', help='Ignore failure to open an #included file')
     options = parser.parse_args()
 
     options.root = os.path.abspath(options.root)
