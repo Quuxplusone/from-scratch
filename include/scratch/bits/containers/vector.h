@@ -13,10 +13,42 @@
 #include <cstddef>
 #include <utility>
 
+namespace scratch::detail {
+
+template<class Vector>
+struct vector_reallocator {
+    using pointer = typename Vector::pointer;
+    using size_type = typename Vector::size_type;
+    using allocator_type = typename Vector::allocator_type;
+    using Alloc_traits = allocator_traits<allocator_type>;
+    allocator_type *m_alloc;
+    pointer m_data;
+    size_type m_count;
+    explicit vector_reallocator(allocator_type& alloc, size_t count) {
+        m_alloc = &alloc;
+        m_data = Alloc_traits::allocate(*m_alloc, count);
+        m_count = count;
+    }
+    pointer data() const { return m_data; }
+    void swap_into_place(Vector *vec) {
+        std::swap(m_data, vec->m_data());
+        std::swap(m_count, vec->m_capacity);
+    }
+    ~vector_reallocator() {
+        if (m_data) {
+            Alloc_traits::deallocate(*m_alloc, m_data, m_count);
+        }
+    }
+};
+
+} // namespace scratch::detail
+
 namespace scratch {
 
 template<class T, class Alloc = allocator<T>>
 class vector {
+    friend struct detail::vector_reallocator<vector>;
+
     using Alloc_traits = typename allocator_traits<Alloc>::template rebind_traits<T>;
 public:
     using value_type = T;
@@ -37,15 +69,10 @@ public:
 
     explicit vector(Alloc a) noexcept : m_data_and_allocator(pointer{}, std::move(a)) {}
     explicit vector(size_t count, Alloc a) : vector(std::move(a)) {
-        m_data() = Alloc_traits::allocate(m_allocator(), count);
-        try {
-            scratch::uninitialized_value_construct(data(), data() + count, m_allocator());
-            m_size = count;
-            m_capacity = count;
-        } catch (...) {
-            Alloc_traits::deallocate(m_allocator(), m_data(), count);
-            throw;
-        }
+        detail::vector_reallocator<vector> reallocator(m_allocator(), count);
+        scratch::uninitialized_value_construct(data(), data() + count, m_allocator());
+        reallocator.swap_into_place(this);
+        m_size = count;
     }
     explicit vector(size_t count, const T& value, Alloc a) : vector(std::move(a)) {
         this->assign(count, value);
@@ -138,15 +165,19 @@ public:
         if (cap > max_size()) {
             throw length_error(exception::nocopy, "reserve");
         } else if (cap > capacity()) {
-            pointer new_data = Alloc_traits::allocate(m_allocator(), cap);
+            detail::vector_reallocator<vector> reallocator(m_allocator(), cap);
             if (m_data()) {
-                T *new_begin = static_cast<T *>(new_data);
-                scratch::uninitialized_move_if_noexcept(begin(), end(), new_begin, m_allocator());
-                scratch::destroy(begin(), end(), m_allocator());
-                Alloc_traits::deallocate(m_allocator(), m_data(), capacity());
+                T *new_begin = static_cast<T *>(reallocator.data());
+                if constexpr (is_nothrow_move_constructible_v<T>) {
+                    uninitialized_move(begin(), end(), new_begin, m_allocator());  // nothrow
+                } else if constexpr (is_copy_constructible_v<T>) {
+                    uninitialized_copy(begin(), end(), new_begin, m_allocator());
+                } else {
+                    uninitialized_move(begin(), end(), new_begin, m_allocator());
+                }
+                destroy(begin(), end(), m_allocator());  // nothrow
             }
-            m_data() = new_data;
-            m_capacity = cap;
+            reallocator.swap_into_place(this);
         }
     }
 
@@ -207,8 +238,25 @@ public:
 
     template<typename... Args>
     void emplace_back(Args&&... args) {
-        this->reserve(size() + 1);
-        Alloc_traits::construct(m_allocator(), &(*this)[size()], std::forward<Args>(args)...);
+        if (size() < capacity()) {
+            Alloc_traits::construct(m_allocator(), &(*this)[size()], std::forward<Args>(args)...);
+        } else {
+            detail::vector_reallocator<vector> reallocator(m_allocator(), size() + 1);
+            T *newelt = static_cast<T *>(reallocator.data() + size());
+            Alloc_traits::construct(m_allocator(), newelt, std::forward<Args>(args)...);
+            if (m_data()) {
+                T *new_begin = static_cast<T *>(reallocator.data());
+                if constexpr (is_nothrow_move_constructible_v<T>) {
+                    uninitialized_move(begin(), end(), new_begin, m_allocator());  // nothrow
+                } else if constexpr (is_copy_constructible_v<T>) {
+                    uninitialized_copy(begin(), end(), new_begin, m_allocator());
+                } else {
+                    uninitialized_move(begin(), end(), new_begin, m_allocator());
+                }
+                destroy(begin(), end(), m_allocator());  // nothrow
+            }
+            reallocator.swap_into_place(this);
+        }
         m_size += 1;
     }
 
