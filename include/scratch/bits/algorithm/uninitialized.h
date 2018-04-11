@@ -30,6 +30,14 @@ FwdIt uninitialized_move_if_noexcept(It first, It last, FwdIt dest)
     return uninitialized_move_if_noexcept(first, last, dest, a);
 }
 
+template<class It, class FwdIt>
+FwdIt uninitialized_relocate(It first, It last, FwdIt dest)
+{
+    using T = iterator_value_type_t<FwdIt>;
+    scratch::allocator<T> a;
+    return uninitialized_relocate(first, last, dest, a);
+}
+
 template<class It, class Size, class FwdIt>
 FwdIt uninitialized_copy_n(It first, Size count, FwdIt dest)
 {
@@ -52,6 +60,14 @@ FwdIt uninitialized_move_if_noexcept_n(It first, Size count, FwdIt dest)
     using T = iterator_value_type_t<FwdIt>;
     scratch::allocator<T> a;
     return uninitialized_move_if_noexcept_n(first, count, dest, a);
+}
+
+template<class It, class Size, class FwdIt>
+FwdIt uninitialized_relocate_n(It first, Size count, FwdIt dest)
+{
+    using T = iterator_value_type_t<FwdIt>;
+    scratch::allocator<T> a;
+    return uninitialized_relocate_n(first, count, dest, a);
 }
 
 template<class FwdIt, class U>

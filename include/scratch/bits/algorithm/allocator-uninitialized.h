@@ -3,8 +3,10 @@
 #include "scratch/bits/algorithm/allocator-destroy.h"
 #include "scratch/bits/algorithm/move-iterator.h"
 #include "scratch/bits/traits-classes/allocator-traits.h"
+#include "scratch/bits/traits-classes/is-foo-iterator.h"
 #include "scratch/bits/traits-classes/iterator-traits.h"
 #include "scratch/bits/type-traits/is-fooible.h"
+#include "scratch/bits/type-traits/is-relocatable.h"
 
 namespace scratch::detail {
 
@@ -116,6 +118,58 @@ FwdIt uninitialized_move_if_noexcept_n(It first, Size count, FwdIt dest, Alloc& 
     } else {
         return uninitialized_move(first, count, dest, a);
     }
+}
+
+template<class It, class FwdIt, class Alloc>
+FwdIt uninitialized_relocate(It first, It last, FwdIt dest, Alloc& a)
+{
+    using T = iterator_value_type_t<FwdIt>;
+    static_assert(is_same_v<T, typename allocator_traits<Alloc>::value_type>);
+    constexpr bool is_simple_memcpy =
+        is_same_v<T, iterator_value_type_t<It>> &&
+        is_contiguous_iterator_v<It> &&
+        is_contiguous_iterator_v<FwdIt> &&
+        allocator_traits<Alloc>::template has_trivial_construct_and_destroy_v<T> &&
+        is_trivially_relocatable_v<T>;
+    if constexpr (is_simple_memcpy) {
+        auto count = (last - first);
+        __builtin_memcpy(&*dest, &*first, count * sizeof(T));
+        return (dest + count);
+    } else {
+        while (first != last) {
+            allocator_traits<Alloc>::construct(a, &*dest, std::move(*first));
+            allocator_traits<Alloc>::destroy(a, &*first);
+            ++first;
+            ++dest;
+        }
+    }
+    return dest;
+}
+
+template<class It, class Size, class FwdIt, class Alloc>
+FwdIt uninitialized_relocate_n(It first, Size count, FwdIt dest, Alloc& a)
+{
+    using T = iterator_value_type_t<FwdIt>;
+    static_assert(is_same_v<T, typename allocator_traits<Alloc>::value_type>);
+    constexpr bool is_simple_memcpy =
+        is_same_v<T, iterator_value_type_t<It>> &&
+        is_contiguous_iterator_v<It> &&
+        is_contiguous_iterator_v<FwdIt> &&
+        allocator_traits<Alloc>::template has_trivial_construct_and_destroy_v<T> &&
+        is_trivially_relocatable_v<T>;
+    if constexpr (is_simple_memcpy) {
+        __builtin_memcpy(&*dest, &*first, count * sizeof(T));
+        return (dest + count);
+    } else {
+        while (count > 0) {
+            allocator_traits<Alloc>::construct(a, &*dest, std::move(*first));
+            allocator_traits<Alloc>::destroy(a, &*first);
+            ++first;
+            ++dest;
+            --count;
+        }
+    }
+    return dest;
 }
 
 template<class FwdIt, class U, class Alloc>

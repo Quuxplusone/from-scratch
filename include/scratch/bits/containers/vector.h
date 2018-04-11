@@ -8,6 +8,7 @@
 #include "scratch/bits/stdexcept/stdexcept.h"
 #include "scratch/bits/traits-classes/allocator-traits.h"
 #include "scratch/bits/traits-classes/is-foo-iterator.h"
+#include "scratch/bits/type-traits/is-relocatable.h"
 #include "scratch/bits/utility/compressed-pair.h"
 
 #include <cstddef>
@@ -50,6 +51,10 @@ class vector {
     friend struct detail::vector_reallocator<vector>;
 
     using Alloc_traits = typename allocator_traits<Alloc>::template rebind_traits<T>;
+    static constexpr bool can_simply_relocate =
+        (is_trivially_relocatable_v<T> && Alloc_traits::template has_trivial_construct_and_destroy_v<T>) ||
+        is_nothrow_move_constructible_v<T>;
+
 public:
     using value_type = T;
     using allocator_type = typename Alloc_traits::allocator_type;
@@ -168,14 +173,15 @@ public:
             detail::vector_reallocator<vector> reallocator(m_allocator(), cap);
             if (m_data()) {
                 T *new_begin = static_cast<T *>(reallocator.data());
-                if constexpr (is_nothrow_move_constructible_v<T>) {
-                    uninitialized_move(begin(), end(), new_begin, m_allocator());  // nothrow
+                if constexpr (can_simply_relocate) {
+                    uninitialized_relocate_n(begin(), size(), new_begin, m_allocator());
                 } else if constexpr (is_copy_constructible_v<T>) {
                     uninitialized_copy(begin(), end(), new_begin, m_allocator());
+                    destroy(begin(), end(), m_allocator());  // nothrow
                 } else {
                     uninitialized_move(begin(), end(), new_begin, m_allocator());
+                    destroy(begin(), end(), m_allocator());  // nothrow
                 }
-                destroy(begin(), end(), m_allocator());  // nothrow
             }
             reallocator.swap_into_place(this);
         }
@@ -242,17 +248,16 @@ public:
             Alloc_traits::construct(m_allocator(), &(*this)[size()], std::forward<Args>(args)...);
         } else {
             detail::vector_reallocator<vector> reallocator(m_allocator(), size() + 1);
+            T *new_begin = static_cast<T *>(reallocator.data());
             T *newelt = static_cast<T *>(reallocator.data() + size());
             Alloc_traits::construct(m_allocator(), newelt, std::forward<Args>(args)...);
-            if (m_data()) {
-                T *new_begin = static_cast<T *>(reallocator.data());
-                if constexpr (is_nothrow_move_constructible_v<T>) {
-                    uninitialized_move(begin(), end(), new_begin, m_allocator());  // nothrow
-                } else if constexpr (is_copy_constructible_v<T>) {
-                    uninitialized_copy(begin(), end(), new_begin, m_allocator());
-                } else {
-                    uninitialized_move(begin(), end(), new_begin, m_allocator());
-                }
+            if constexpr (can_simply_relocate) {
+                uninitialized_relocate_n(begin(), size(), new_begin, m_allocator());
+            } else if constexpr (is_copy_constructible_v<T>) {
+                uninitialized_copy(begin(), end(), new_begin, m_allocator());
+                destroy(begin(), end(), m_allocator());  // nothrow
+            } else {
+                uninitialized_move(begin(), end(), new_begin, m_allocator());
                 destroy(begin(), end(), m_allocator());  // nothrow
             }
             reallocator.swap_into_place(this);

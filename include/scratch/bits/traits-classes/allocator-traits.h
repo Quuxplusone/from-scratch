@@ -53,6 +53,11 @@ template<class Alloc> auto allocator_pocs(priority_tag<0>) -> false_type;
 template<class Alloc> auto allocator_iae(priority_tag<1>) -> typename Alloc::is_always_equal;
 template<class Alloc> auto allocator_iae(priority_tag<0>) -> typename is_empty<Alloc>::type;
 
+template<class Alloc, class T> auto allocator_htcad(Alloc& a, T *p, priority_tag<3>) -> typename Alloc::template has_trivial_construct_and_destroy<T>;
+template<class Alloc, class T> auto allocator_htcad(Alloc& a, T *p, priority_tag<2>) -> decltype(a.destroy(p), void(), false_type{});
+template<class Alloc, class T> auto allocator_htcad(Alloc& a, T *p, priority_tag<1>) -> decltype(a.construct(p, declval<T&&>()), void(), false_type{});
+template<class Alloc, class T> auto allocator_htcad(Alloc& a, T *p, priority_tag<0>) -> true_type;
+
 template<class U, class Alloc, class = enable_if_t<is_same_v<U, typename Alloc::value_type>>>
 auto allocator_rebind(Alloc&, priority_tag<2>) -> Alloc;
 template<class U, class Alloc>
@@ -86,6 +91,9 @@ struct allocator_traits {
     static constexpr bool propagate_on_container_move_assignment_v = propagate_on_container_move_assignment{};
     static constexpr bool propagate_on_container_swap_v = propagate_on_container_swap{};
     static constexpr bool is_always_equal_v = is_always_equal{};
+
+    template<class T> using has_trivial_construct_and_destroy = decltype(detail::allocator_htcad<Alloc, T>(declval<Alloc&>(), nullptr, priority_tag<3>{}));
+    template<class T> static constexpr bool has_trivial_construct_and_destroy_v = has_trivial_construct_and_destroy<T>{};
 
     template<class U> using rebind_alloc = decltype(detail::allocator_rebind<U>(declval<Alloc&>(), priority_tag<2>{}));
     template<class U> using rebind_traits = allocator_traits<rebind_alloc<U>>;

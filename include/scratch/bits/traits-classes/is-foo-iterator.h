@@ -5,6 +5,7 @@
 #include "scratch/bits/type-traits/enable-if.h"
 #include "scratch/bits/type-traits/integral-constant.h"
 #include "scratch/bits/type-traits/is-convertible.h"
+#include "scratch/bits/type-traits/is-foo.h"
 
 namespace scratch::detail {
 
@@ -29,5 +30,8 @@ template<class It> inline constexpr bool is_random_access_iterator_v = is_random
 
 template<class It> inline constexpr bool is_iterator_v = is_input_iterator_v<It> || is_output_iterator_v<It>;
 template<class It> struct is_iterator : bool_constant<is_iterator_v<It>> {};
+
+template<class It> struct is_contiguous_iterator : is_pointer<It> {};
+template<class It> inline constexpr bool is_contiguous_iterator_v = is_contiguous_iterator<It>::value;
 
 } // namespace scratch
