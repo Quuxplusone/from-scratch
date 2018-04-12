@@ -52,8 +52,10 @@ class vector {
 
     using Alloc_traits = typename allocator_traits<Alloc>::template rebind_traits<T>;
     static constexpr bool can_simply_relocate =
-        (is_trivially_relocatable_v<T> && Alloc_traits::template has_trivial_construct_and_destroy_v<T>) ||
-        is_nothrow_move_constructible_v<T>;
+        Alloc_traits::template has_trivial_construct_and_destroy_v<T> && (
+            is_nothrow_move_constructible_v<T> ||
+            is_trivially_relocatable_v<T>
+        );
 
 public:
     using value_type = T;
