@@ -1,62 +1,12 @@
 #include <benchmark/benchmark.h>
-#include <cassert>
-#include <cstdlib>
 #include <cstring>
 #include <type_traits>
 #include <utility>
+#include <optional>
 #include <vector>
-#include "tombstone-traits.h"
-#include "optional.h"
 #include "robin-hood-set.h"
 #include "ska-flathash.h"
 
-#if ALSO_TEST_BOOST
- #include "boost/version.hpp"
- #if BOOST_VERSION >= 105600
-  #include "boost/optional.hpp"
-  namespace boost2 {
-    template<class T>
-    struct optional : boost::optional<T> {
-        bool has_value() const { return bool(*this); }
-    };
-  } // namespace boost2
-  #define boost boost2
- #else // pre-1.56
-  #define private protected
-   #include "boost/optional.hpp"
-  #undef private
-  namespace boost2 {
-    template<class T>
-    struct optional : boost::optional<T> {
-        using boost::optional<T>::optional;
-        using boost::optional<T>::operator=;
-        bool has_value() const { return bool(*this); }
-        template<class... As>
-        void emplace(As&&... as) {
-            this->destroy();
-            new (this->m_storage.address()) T(std::forward<As>(as)...);
-            this->m_initialized = true;
-        }
-    };
-  } // namespace boost2
-  #define boost boost2
- #endif // pre-1.56
-#endif // ALSO_TEST_BOOST
-
-#if __cplusplus >= 201703L
-#include <optional>
-#else // pre-C++17
-#include <experimental/optional>
-namespace std {
-    template<class T>
-    struct optional : std::experimental::optional<T> {
-        using std::experimental::optional<T>::optional;
-        using std::experimental::optional<T>::operator=;
-        bool has_value() const { return bool(*this); }
-        void reset() { *this = std::experimental::nullopt; }
-    };
-} // namespace std
-#endif // pre-C++17
 
 inline unsigned bernstein_hash(const char *s)
 {
@@ -67,11 +17,8 @@ inline unsigned bernstein_hash(const char *s)
 
 template<int Spares>
 struct Tombstoneable {
-    char *s;
-    explicit Tombstoneable(const char *t) : s(strdup(t)) {}
-    Tombstoneable(Tombstoneable&& rhs) noexcept : s(rhs.s) { rhs.s = nullptr; }
-    Tombstoneable& operator=(Tombstoneable&& rhs) noexcept { free(s); s = rhs.s; rhs.s = nullptr; return *this; }
-    ~Tombstoneable() { free(s); }
+    const char *s;
+    explicit Tombstoneable(const char *t) : s(t) {}
     bool operator==(const Tombstoneable& rhs) const noexcept { return strcmp(s, rhs.s) == 0; }
     unsigned hash() const noexcept { return bernstein_hash(s); }
 };
@@ -80,24 +27,26 @@ template<int Spares> struct std::hash<Tombstoneable<Spares>> {
     size_t operator()(const Tombstoneable<Spares>& t) const { return t.hash(); }
 };
 
-template<int Spares> struct scratch::tombstone_traits<Tombstoneable<Spares>> {
-    static constexpr size_t spare_representations = Spares;
+#ifdef _LIBCPP_SUPPORTS_TOMBSTONE_TRAITS
+template<int Spares> struct std::tombstone_traits<Tombstoneable<Spares>> {
     static char special_values[Spares];
-    static constexpr void set_spare_representation(Tombstoneable<Spares> *t, size_t idx) {
-        t->s = &special_values[idx];
+    static constexpr size_t spare_representations = Spares;
+    static constexpr void set_spare_representation(Tombstoneable<Spares> *p, size_t i) {
+        *(char**)p = &special_values[i];
     }
-    static constexpr size_t index(const Tombstoneable<Spares> *t) {
+    static constexpr size_t index(const Tombstoneable<Spares> *p) {
         for (int i=0; i < Spares; ++i) {
-            if (t->s == &special_values[i]) return i;
+            if (*(char**)p == &special_values[i])
+                return i;
         }
         return size_t(-1);
     }
 };
-template<int Spares> char scratch::tombstone_traits<Tombstoneable<Spares>>::special_values[Spares];
+template<int Spares> char std::tombstone_traits<Tombstoneable<Spares>>::special_values[Spares];
+#endif
 
-template<class T>
-T random_element() {
-    char buffer[10];
+const char *seven_letter_string() {
+    char *buffer = new char[8];
     buffer[0] = "abcdefghijklmnopqrstuvwxyz"[rand() % 16];
     buffer[1] = "abcdefghijklmnopqrstuvwxyz"[rand() % 16];
     buffer[2] = "abcdefghijklmnopqrstuvwxyz"[rand() % 16];
@@ -105,111 +54,85 @@ T random_element() {
     buffer[4] = "abcdefghijklmnopqrstuvwxyz"[rand() % 16];
     buffer[5] = "abcdefghijklmnopqrstuvwxyz"[rand() % 16];
     buffer[6] = "abcdefghijklmnopqrstuvwxyz"[rand() % 16];
-    buffer[7] = "abcdefghijklmnopqrstuvwxyz"[rand() % 16];
-    buffer[8] = '\0';
-    return T(buffer);
+    buffer[7] = '\0';
+    return buffer;
 }
 
-template<template<class> class Optional, class T>
-void test_robinhood(benchmark::State& state)
-{
-    int M = state.range(0);
-    scratch::robin_hood_set<Optional, T> s;
-    while (state.KeepRunning()) {
-        s.clear();
-        int erased_count = 0;
-        int found_count = 0;
-        for (int i=0; i < M/2; ++i) {
-            s.insert(random_element<T>());
-        }
-        for (int i=0; i < M/2; ++i) {
-            erased_count += s.erase(random_element<T>());
-        }
-        for (int i=0; i < M/2; ++i) {
-            auto it = s.find(random_element<T>());
-            found_count += (it != s.end());
-        }
-        benchmark::DoNotOptimize(erased_count);
-        benchmark::DoNotOptimize(found_count);
-    }
-}
+
+static size_t cur_ = 0;
+static size_t hwm_ = 0;
 
 template<class T>
-void test_ska_flathash(benchmark::State& state)
+struct MyAllocator {
+    using value_type = T;
+    template<class U> struct rebind { using other = MyAllocator<U>; };
+    MyAllocator() = default;
+    template<class U> MyAllocator(const MyAllocator<U>&) {}
+    template<class U> MyAllocator& operator=(const MyAllocator<U>&) { return *this; }
+    constexpr bool operator==(MyAllocator&) const noexcept { return true; }
+    constexpr bool operator!=(MyAllocator&) const noexcept { return false; }
+    T *allocate(size_t n) const {
+        cur_ += n * sizeof(T);
+        if (cur_ > hwm_) hwm_ = cur_;
+        return std::allocator<T>().allocate(n);
+    }
+    void deallocate(T *p, size_t n) const {
+        cur_ -= n * sizeof(T);
+        std::allocator<T>().deallocate(p, n);
+    }
+};
+
+template<class SetT, class T = typename SetT::value_type>
+void test_set(benchmark::State& state)
 {
     int M = state.range(0);
-    ska::flat_hash_set<T> s;
-    while (state.KeepRunning()) {
-        s.clear();
+    std::vector<T> to_insert, to_erase, to_find;
+    for (int i=0; i < M; ++i) {
+        to_insert.emplace_back(seven_letter_string());
+        to_erase.emplace_back(seven_letter_string());
+        to_find.emplace_back(seven_letter_string());
+    }
+    __int128 total_hwms = 0;
+    size_t count_hwms = 0;
+    for (auto _ : state) {
+        SetT s;
+        hwm_ = cur_;
         int erased_count = 0;
         int found_count = 0;
-        for (int i=0; i < M/2; ++i) {
-            s.insert(random_element<T>());
+        for (const auto& r : to_insert) {
+            s.insert(r);
         }
-        for (int i=0; i < M/2; ++i) {
-            erased_count += s.erase(random_element<T>());
+        for (const auto& r : to_erase) {
+            erased_count += s.erase(r);
         }
-        for (int i=0; i < M/2; ++i) {
-            auto it = s.find(random_element<T>());
-            found_count += (it != s.end());
+        for (const auto& r : to_find) {
+            found_count += (s.find(r) != s.end());
         }
         benchmark::DoNotOptimize(erased_count);
         benchmark::DoNotOptimize(found_count);
+        total_hwms += hwm_;
+        count_hwms += 1;
     }
+    state.counters["HWM"] = total_hwms / count_hwms;
 }
 
 static int print = []() {
 #define PRINT_SIZE(...) \
     printf("sizeof " #__VA_ARGS__ " = %zu\n", sizeof(__VA_ARGS__))
+    PRINT_SIZE(scratch::robin_hood_element<std::optional, Tombstoneable<0>>);
+    PRINT_SIZE(scratch::robin_hood_element<std::optional, Tombstoneable<1>>);
     PRINT_SIZE(scratch::robin_hood_element<std::optional, Tombstoneable<2>>);
-#if ALSO_TEST_BOOST
-    PRINT_SIZE(scratch::robin_hood_element<boost::optional, Tombstoneable<2>>);
-#endif
-    PRINT_SIZE(scratch::robin_hood_element<scratch::optional, Tombstoneable<0>>);
-    PRINT_SIZE(scratch::robin_hood_element<scratch::optional, Tombstoneable<1>>);
-    PRINT_SIZE(scratch::robin_hood_element<scratch::optional, Tombstoneable<2>>);
     return 0;
 #undef PRINT_SIZE
 }();
 
-void std_optional(benchmark::State& state)
-{
-    test_robinhood<std::optional, Tombstoneable<2>>(state);
-}
+template<class T> using ska_set =
+    ska::flat_hash_set<T, std::hash<T>, std::equal_to<T>, MyAllocator<T>>;
+template<template<class> class O, class T> using rh_set =
+    scratch::robin_hood_set<O, T, std::hash<T>, std::equal_to<T>, MyAllocator<T>>;
 
-#if ALSO_TEST_BOOST
-void boost_optional(benchmark::State& state)
-{
-    test_robinhood<boost::optional, Tombstoneable<2>>(state);
-}
-#endif
-
-void scratch_tombstone0(benchmark::State& state)
-{
-    test_robinhood<scratch::optional, Tombstoneable<0>>(state);
-}
-
-void scratch_tombstone1(benchmark::State& state)
-{
-    test_robinhood<scratch::optional, Tombstoneable<1>>(state);
-}
-
-void scratch_tombstone2(benchmark::State& state)
-{
-    test_robinhood<scratch::optional, Tombstoneable<2>>(state);
-}
-
-void ska_flathash(benchmark::State& state)
-{
-    test_ska_flathash<Tombstoneable<2>>(state);
-}
-
-BENCHMARK(ska_flathash)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
-BENCHMARK(std_optional)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
-#if ALSO_TEST_BOOST
-BENCHMARK(boost_optional)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
-#endif
-BENCHMARK(scratch_tombstone0)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
-BENCHMARK(scratch_tombstone1)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
-BENCHMARK(scratch_tombstone2)->Arg(100)->Arg(1000)->Arg(10'000)->Arg(100'000);
+BENCHMARK_TEMPLATE(test_set, ska_set<Tombstoneable<2>>)->Arg(1000);
+BENCHMARK_TEMPLATE(test_set, rh_set<std::optional, Tombstoneable<0>>)->Arg(1000);
+BENCHMARK_TEMPLATE(test_set, rh_set<std::optional, Tombstoneable<1>>)->Arg(1000);
+BENCHMARK_TEMPLATE(test_set, rh_set<std::optional, Tombstoneable<2>>)->Arg(1000);
 BENCHMARK_MAIN();
