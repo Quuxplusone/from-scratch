@@ -2,4 +2,5 @@
 
 #include "bits/algorithm/copy.h"
 #include "bits/algorithm/generate.h"
+#include "bits/algorithm/make-heap.h"
 #include "bits/algorithm/min.h"
