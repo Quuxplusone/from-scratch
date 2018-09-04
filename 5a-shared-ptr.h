@@ -103,7 +103,7 @@ private:
         maybe_enable_sharing_from_this_impl(p, p);
     }
     void maybe_enable_sharing_from_this_impl(...) { }
-    template<class Y, class Z, class = std::enable_if_t<std::is_convertible_v<Y *, const std::enable_shared_from_this<Z> *>>>
+    template<class Y, class Z>
     void maybe_enable_sharing_from_this_impl(Y *, const std::enable_shared_from_this<Z> *p)
     {
         if (p != nullptr) {

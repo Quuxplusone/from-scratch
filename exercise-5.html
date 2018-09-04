@@ -7,7 +7,7 @@
 <h2>Exercise 5. Smart pointers from scratch.</h2>
 
 <p>
-Open <a href="https://wandbox.org/permlink/F0TqIV7X6DnFGKjx">this wandbox</a>
+Open <a href="https://wandbox.org/permlink/KScfhrXep3TNcDa3">this wandbox</a>
 (<a href="5a-main.cc">b</a>, <a href="5a-shared-ptr.h">b</a>, <a href="5a-make-shared.h">b</a>,
 <a href="5a-smart-ptr-base.h">b</a>, <a href="5a-test-refcounting.cc">b</a>,
 <a href="5a-test-crtp.cc">b</a>). It contains an almost-complete implementation of
@@ -39,7 +39,7 @@ in "shared-ptr.h". Fill in the blanks according to the following algorithm:
 Run the test cases in "test-refcounting.cc". They should pass.
 
 <p>
-3. Use the <code>-DY=std::this_thread_yield();</code> trick that we learned in Exercise 4
+3. Use the <code>-DY=std::this_thread::yield();</code> trick that we learned in Exercise 4
 to stress-test your <code>increment_use_count</code> and <code>decrement_use_count</code>
 code. Does it still work? (It should.) If <code>Y</code> exposes bugs in your code,
 try to fix them. Pay attention to "time-of-check-to-time-of-use" races: you must not
@@ -56,6 +56,7 @@ see how to connect <code>maybe_enable_sharing_from_this</code> to the definition
 <code>enable_shared_from_this</code> from
 <a href="https://github.com/Quuxplusone/from-scratch/blob/master/include/scratch/bits/smart-ptrs/enable-shared-from-this.h">Arthur's from-scratch repo</a>?
 
+<p>
 2. (Optional) Try to understand the SFINAE on <code>maybe_enable_shared_from_this</code>.
 The file "test-crtp.cc"
 (<a href="5a-test-crtp.cc">backup</a>) may be helpful to understand the corner cases.

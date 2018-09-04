@@ -110,6 +110,11 @@ an extension flag.
 1. Change the compiler from Clang to GCC, and add the flag <code>-fconcepts</code>
 to GCC's compiler options. Run the code. (It should work.)
 
+<p>
+(If you're super into Concepts, you may have noticed that the code in this wandbox
+says <code>concept bool</code> where real C++20 code would say <code>concept</code>.
+GCC supports an older Concepts syntax, with slight differences from the C++20 syntax.)
+
 
 <h3>Exercise 1d. Godbolt and Rextester</h3>
 
@@ -123,30 +128,35 @@ Wandbox, unlike Godbolt, can actually link and run the program remotely.
 Notice that the assembly output instantly refreshes; there is no "Run" button on Godbolt.
 
 <p>
+To change the compiler quickly: Click the dropdown and hit backspace, then type "gcc trunk"
+and hit enter.
+
+<p>
 2. Change the compiler options to include <code>-O3</code>. Notice that the assembly output
 refreshes --- and it gets much shorter!
 
 <p>
-3. Change the compiler to "x86-64 CL 19 2017 RTW". This impenetrable acronym means
+3. Change the compiler to "x86-64 MSVC 19 2017 RTW". This impenetrable acronym means
 "Visual Studio 2017." Godbolt supports not just GCC and Clang but also Microsoft Visual Studio
-and Intel ICC. (It also supports <a href="https://www.zapcc.com">Zapcc</a> which is just
-a faster version of Clang.)
+and Intel ICC. (It also supports <a href="http://ellcc.org">ELLCC</a> and
+<a href="https://www.zapcc.com">Zapcc</a> which are just forks of Clang.)
 
 <p>
 4. Click the "Share" dropdown in the upper right corner of the screen to get a shareable
 permalink to your Visual Studio codegen.
 
 <p>
-5. Play around with the six blue/gray buttons underneath the compiler-selection dropdown.
+5. Play around with the seven blue/gray buttons underneath the compiler-selection dropdown.
 They change the filter applied to the assembly code: exclude comments, flatten whitespace,
-show machine code, et cetera. I don't know what they all do. The settings I picked for
-this exercise seem like the cleanest ones.
+show machine code, et cetera. The settings I picked for this exercise seem like the cleanest
+ones.
 
 <p>
 6. Open <a href="http://rextester.com/ATF90700">this rextester</a> (<a href="1a.cc">backup</a>).
 Click the "Run it" button below the source-code entry box. Edit the program to print
-"hello rextester" instead of "hello world". Click "Run it". Click "Share it" to get a
-shareable permalink.
+"hello rextester" instead of "hello world". Click "Run it". To get a shareable permalink,
+click "Put on a wall"; enter something as the snippet's title (doesn't matter), select "Code wall",
+and click "OK".
 
 <p>
 As far as I know, Rextester is the only freely accessible online compiler service that supports
