@@ -12,18 +12,18 @@ to protect access to shared data.
 
 <h3>Exercise 4a. Find the concurrency bug!</h3>
 <p>
-Open <a href="https://wandbox.org/permlink/8lURJet879iGmrTF">this wandbox</a>
+Open <a href="https://wandbox.org/permlink/qj4FvzrmL62wYCt3">this wandbox</a>
 (<a href="4.cc">backup</a>). You'll see an implementation of a "<code>ThreadSafeStack</code>"
 that may or may not actually be thread-safe.
 
 <p>
 1. Read the definitions of <code>push</code> and <code>blocking_pop</code>. (Ignore the
-letter <code>Y</code> in the margin.) Read the test case in <code>main</code>; figure out
+letter <code>X</code> in the margin.) Read the test case in <code>main</code>; figure out
 what it's testing for. Does it make sense? Run the code. Does it seem to work? (It should.)
 
 <p>
-2. Now look at the <code>Y</code> in the margin. In the "Compiler Options" on Wandbox, replace
-<code>-DY=</code> with <code>-DY=std::this_thread::yield();</code> and re-run the code.
+2. Now look at the <code>X</code> in the margin. In the "Compiler Options" on Wandbox, replace
+<code>-DX=</code> with <code>-DX=std::this_thread::yield();</code> and re-run the code.
 It segfaults! This shows that the original code has a bug, and the bug manifests itself
 only when a context-switch happens at exactly the right time.
 

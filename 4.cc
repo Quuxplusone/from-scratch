@@ -16,21 +16,21 @@ struct ThreadSafeStack {
     std::stack<T> data;
     
     void push(T t) {
-Y       std::unique_lock<std::mutex> lk(m);
-Y       data.emplace(std::move(t));
-Y       cv.notify_one();  // if someone's waiting, get them to wake up and pop this item
+X       std::unique_lock<std::mutex> lk(m);
+X       data.emplace(std::move(t));
+X       cv.notify_one();  // if someone's waiting, get them to wake up and pop this item
     }
 
     T blocking_pop() {
-Y       while (data.empty()) {
-Y           std::unique_lock<std::mutex> lk(m);
-Y           cv.wait(lk);  // wait for an item to be pushed
-Y       }
-Y       std::unique_lock<std::mutex> lk(m);
-Y       T result = std::move(data.top());
-Y       data.pop();
-Y       lk.unlock();
-Y       return result;
+X       while (data.empty()) {
+X           std::unique_lock<std::mutex> lk(m);
+X           cv.wait(lk);  // wait for an item to be pushed
+X       }
+X       std::unique_lock<std::mutex> lk(m);
+X       T result = std::move(data.top());
+X       data.pop();
+X       lk.unlock();
+X       return result;
     }
 };
 

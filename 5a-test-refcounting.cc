@@ -3,7 +3,7 @@
 #include <thread>
 #include <vector>
 
-#define Y std::this_thread::yield();
+#define X std::this_thread::yield();
 
 static std::atomic<int> destroyed_fizzbuzzes(0);
 
@@ -22,17 +22,17 @@ void test_refcounting_1()
     p = my::make_shared<Fizzbuzz>();
     assert(destroyed_fizzbuzzes == 1);
     for (int i=0; i < 30; ++i) {
-Y       ts.emplace_back([&](){
-Y           auto q = p;
-Y           my::shared_ptr<int> r(q, &q->fizz);
-Y           my::shared_ptr<int> s(q, &p->buzz);
-Y           q = my::shared_ptr<Fizzbuzz>(s, nullptr);
-Y           s = std::move(r);
-Y           r = my::shared_ptr<int>(p, &p->buzz);
-Y       });
-Y   }
-Y   assert(destroyed_fizzbuzzes == 1);
-Y   for (auto&& t : ts) t.join();
+X       ts.emplace_back([&](){
+X           auto q = p;
+X           my::shared_ptr<int> r(q, &q->fizz);
+X           my::shared_ptr<int> s(q, &p->buzz);
+X           q = my::shared_ptr<Fizzbuzz>(s, nullptr);
+X           s = std::move(r);
+X           r = my::shared_ptr<int>(p, &p->buzz);
+X       });
+X   }
+X   assert(destroyed_fizzbuzzes == 1);
+X   for (auto&& t : ts) t.join();
     assert(destroyed_fizzbuzzes == 1);
     p = nullptr;
     assert(destroyed_fizzbuzzes == 2);
@@ -48,21 +48,21 @@ void test_refcounting_2()
         destroyed_fizzbuzzes = 0;
     
         tA = std::thread([&](){
-Y           auto ptr = my::make_shared<Fizzbuzz>();
-Y           a_to_b.set_value(ptr);
-Y           ptr = nullptr;
-Y           ptr = b_to_a.get_future().get();
-Y           b_to_a = decltype(b_to_a)();  // reset for the next round
-Y           ptr = nullptr;
+X           auto ptr = my::make_shared<Fizzbuzz>();
+X           a_to_b.set_value(ptr);
+X           ptr = nullptr;
+X           ptr = b_to_a.get_future().get();
+X           b_to_a = decltype(b_to_a)();  // reset for the next round
+X           ptr = nullptr;
         });
 
         tB = std::thread([&](){
-Y           auto ptr = a_to_b.get_future().get();
-Y           a_to_b = decltype(a_to_b)();  // reset for the next round
-Y           ptr = nullptr;
-Y           ptr = my::make_shared<Fizzbuzz>();
-Y           b_to_a.set_value(ptr);
-Y           ptr = nullptr;
+X           auto ptr = a_to_b.get_future().get();
+X           a_to_b = decltype(a_to_b)();  // reset for the next round
+X           ptr = nullptr;
+X           ptr = my::make_shared<Fizzbuzz>();
+X           b_to_a.set_value(ptr);
+X           ptr = nullptr;
         });
 
         tA.join();
