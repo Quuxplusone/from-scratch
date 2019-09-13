@@ -99,10 +99,10 @@ Click "Run" to compile and run your multiple-file program!
 <h3>Exercise 1c. Experimental options</h3>
 
 <p>
-Open <a href="https://wandbox.org/permlink/s2QwWPdmLDNaqCfZ">this wandbox</a>
+Open <a href="https://wandbox.org/permlink/ty82Nfk5NgXEjOgH">this wandbox</a>
 (<a href="1c.cc">backup</a>). This program uses the
-<a href="http://en.cppreference.com/w/cpp/language/constraints">"Concepts Lite" syntax</a>
-currently available in a Technical Specification and slated for inclusion in C++20.
+<a href="http://en.cppreference.com/w/cpp/language/constraints">Concepts syntax</a>
+currently slated for inclusion in C++20.
 This syntax is <i>not</i> standard C++17, but the GCC compiler can support it under
 an extension flag.
 
@@ -110,18 +110,15 @@ an extension flag.
 1. Change the compiler from Clang to GCC, and add the flag <code>-fconcepts</code>
 to GCC's compiler options. Run the code. (It should work.)
 
-<p>
-(If you're super into Concepts, you may have noticed that the code in this wandbox
-says <code>concept bool</code> where real C++20 code would say <code>concept</code>.
-GCC supports an older Concepts syntax, with slight differences from the C++20 syntax.)
-
 
 <h3>Exercise 1d. Godbolt and Rextester</h3>
 
 <p>
-Open <a href="https://godbolt.org/g/X6gEaL">this godbolt</a> (<a href="1a.cc">backup</a>).
+Open <a href="https://godbolt.org/z/9Ps-g7">this godbolt</a> (<a href="1a.cc">backup</a>).
 Godbolt, unlike Wandbox, shows you the assembly output of the compiler.
-Wandbox, unlike Godbolt, can actually link and run the program remotely.
+Within the past year, Godbolt gained the ability to link and run the programs remotely;
+but only if they fit in a single source file and don't link against any external libraries
+(such as Boost).
 
 <p>
 1. At the top of the right pane, you can change the compiler. Change it to "x86-64 gcc (trunk)".
@@ -136,20 +133,22 @@ and hit enter.
 refreshes --- and it gets much shorter!
 
 <p>
-3. Change the compiler to "x86-64 MSVC 19 2017 RTW". This impenetrable acronym means
-"Visual Studio 2017." Godbolt supports not just GCC and Clang but also Microsoft Visual Studio
+3. Change the compiler to "x64 msvc 19.22". This basically means "Visual Studio 2019."
+Godbolt supports not just GCC and Clang but also Microsoft Visual Studio
 and Intel ICC. (It also supports <a href="http://ellcc.org">ELLCC</a> and
-<a href="https://www.zapcc.com">Zapcc</a> which are just forks of Clang.)
+<a href="https://www.zapcc.com">Zapcc</a> which are forks of Clang, and
+<a href="http://www.delorie.com/djgpp/">DJGPP</a> which is an old-school fork of GCC.)
 
 <p>
 4. Click the "Share" dropdown in the upper right corner of the screen to get a shareable
 permalink to your Visual Studio codegen.
 
 <p>
-5. Play around with the seven blue/gray buttons underneath the compiler-selection dropdown.
-They change the filter applied to the assembly code: exclude comments, flatten whitespace,
+5. Play around with the nine checkboxes underneath the compiler-selection dropdown.
+They mostly the filter applied to the assembly code: exclude comments, flatten whitespace,
 show machine code, et cetera. The settings I picked for this exercise seem like the cleanest
-ones.
+ones. The most "fun" one is labeled <code>./a.out</code> and controls whether to actually
+link and run the program, or just compile it to assembly.
 
 <p>
 6. Open <a href="http://rextester.com/ATF90700">this rextester</a> (<a href="1a.cc">backup</a>).

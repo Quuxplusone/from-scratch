@@ -42,7 +42,7 @@ both functions must deal with <code>m_ready</code> under a mutex lock. (You shou
 <h3>Exercise 7b (optional). Now do it without data races.</h3>
 
 <p>
-Use our <code>-DX=std::this_thread::yield();</code> trick to test your implementations.
+Use our <code>-DX=std::this_thread::sleep_for(1ms);</code> trick to test your implementations.
 Do they really work?
 
 

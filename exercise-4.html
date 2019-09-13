@@ -23,15 +23,20 @@ what it's testing for. Does it make sense? Run the code. Does it seem to work? (
 
 <p>
 2. Now look at the <code>X</code> in the margin. In the "Compiler Options" on Wandbox, replace
-<code>-DX=</code> with <code>-DX=std::this_thread::yield();</code> and re-run the code.
+<code>-DX=</code> with <code>-DX=std::this_thread::sleep_for(1ms);</code> and re-run the code.
 It segfaults! This shows that the original code has a bug, and the bug manifests itself
 only when a context-switch happens at exactly the right time.
+
+<p>
+<i>Sidebar: This exercise used to tell you to use <code>-DX=std::this_thread::yield();</code>
+instead of <code>sleep_for</code>. But as of Clang 7, for some reason,
+<code>yield</code> no longer suffices to reproduce the segfault!</i>
 
 <p>
 3. Given what you know about the proper use of <code>mutex</code> and <code>condition_variable</code>,
 find and fix the bug. (Your fix should actually make the code shorter and simpler.) When you're
 done, run the code again; it should no longer segfault, with or without the calls to
-<code>yield</code>.
+<code>sleep_for</code>.
 
 <h3>Exercise 4b (optional). Running user code under a lock</h3>
 <p>

@@ -1,9 +1,12 @@
 #include <cassert>
+#include <chrono>
 #include <future>
 #include <thread>
 #include <vector>
 
-#define X std::this_thread::yield();
+using namespace std::chrono_literals;
+
+#define X std::this_thread::sleep_for(1ms);
 
 static std::atomic<int> destroyed_fizzbuzzes(0);
 

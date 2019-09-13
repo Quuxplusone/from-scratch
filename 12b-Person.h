@@ -27,7 +27,7 @@ struct Person {
     friend auto& operator<<(std::ostream& os, const Person& p) {
         return (os << p.first_name << ' ' << p.last_name);
     }
-    auto to_string() const { std::ostringstream oss; oss << *this; return oss.str(); }
+    std::string to_string() const { std::ostringstream oss; oss << *this; return std::move(oss).str(); }
 };
 
 } // namespace my

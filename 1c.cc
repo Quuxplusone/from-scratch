@@ -2,7 +2,7 @@
 #include <vector>
 
 template<class It>
-concept bool Iterator = requires(It it) {
+concept Iterator = requires(It it) {
     *it;
     ++it;
     it == it;
@@ -10,7 +10,7 @@ concept bool Iterator = requires(It it) {
 };
 
 template<class T>
-concept bool Iterable = Iterator<typename T::iterator> && requires(T ctr) {
+concept Iterable = Iterator<typename T::iterator> && requires(T ctr) {
     { begin(ctr) } -> typename T::iterator;
     { end(ctr) } -> typename T::iterator;
 };
