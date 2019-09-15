@@ -36,8 +36,11 @@ Your task is to implement <code>future_shared_state::set_ready()</code> and
 Remember that <code>set_continuation</code> is called from <code>future::then</code>,
 and <code>set_ready</code> is called from <code>promise::set_value</code>.
 So, to avoid a race between <code>set_continuation</code>'s read and <code>set_ready</code>'s write,
-both functions must deal with <code>m_ready</code> under a mutex lock. (You should use
+both functions must deal with <code>m_then</code> under a mutex lock. (You should use
 <code>m_mtx</code> for this purpose.)
+
+<p>
+But you must not <i>call</i> <code>m_then</code> under the mutex lock! Why not?
 
 <h3>Exercise 7b (optional). Now do it without data races.</h3>
 
