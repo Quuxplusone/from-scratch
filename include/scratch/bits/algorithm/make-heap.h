@@ -126,7 +126,7 @@ void pop_heap(RandomIt first, RandomIt last)
     pop_heap(first, last, [](auto&& a, auto&& b){ return a < b; });
 }
 
-template<class RandomIt>`
+template<class RandomIt>
 void sort_heap(RandomIt first, RandomIt last)
 {
     sort_heap(first, last, [](auto&& a, auto&& b){ return a < b; });
