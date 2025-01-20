@@ -17,7 +17,7 @@ struct counted_copying_iterator {
 
     const T& operator*() const noexcept { return *m_t; }
     const T *operator->() const noexcept { return m_t; }
-    const T& operator[](difference_type) const noexcept { return m_t; }
+    const T& operator[](difference_type) const noexcept { return *m_t; }
 
     auto& operator+=(int i) noexcept { m_count -= i; return *this; }
     auto& operator++() noexcept { return *this += 1; }
